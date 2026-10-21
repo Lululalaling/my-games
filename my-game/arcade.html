@@ -1,0 +1,853 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>호성 오락실</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 12' shape-rendering='crispEdges'%3E%3Cpath fill='%23f3efe4' d='M3 0h4v1h1v1h1v2h1v5h-1v2h-2v1h-4v-1h-2v-2h-1v-5h1v-2h1v-1h1z'/%3E%3Cpath fill='%23151515' d='M2 5h1v1h-1zM7 5h1v1h-1zM4 6h2v1h-2z'/%3E%3Cpath fill='%23e07a6f' d='M1 6h1v1h-1zM8 6h1v1h-1z'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/galmuri.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/pretendard.css">
+<style>
+  :root {
+    --room: #171a2e;
+    --room-2: #22264a;
+    --line: #2c3160;
+    --ink: #1d2236;
+    --paper: #f1f2f7;
+    --dim: #a9aecb;
+    --mute: #5a5f86;
+    --screen: #0d1020;
+    --btn: #ffcf3f;
+    --btn-deep: #c99a12;
+    /* 게임기 몸통 색: 기본은 분홍(로비의 달걀 점프 게임기) */
+    --c: #ff7a9a;
+    --c-deep: #e2577c;
+    --c-ink: #6b1f3c;
+    --pixel: "Galmuri11", monospace;
+    --sans: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  }
+  .sky { --c: #5cc8f5; --c-deep: #2f9fd8; --c-ink: #06357a; }
+  .ice { --c: #e8f6ff; --c-deep: #5cc8f5; --c-ink: #06357a; }
+  .bunny { --c: #ffc8d8; --c-deep: #ff8fa3; --c-ink: #5b2340; }
+  .blue { --c: #0a5fd1; --c-deep: #5cc8f5; --c-ink: #06357a; }
+  .off { --c: #3a3f6b; --c-deep: #2c3160; --c-ink: #22264a; }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    background-color: var(--room);
+    color: var(--paper);
+    font-family: var(--sans);
+    line-height: 1.7;
+    word-break: keep-all;
+    overflow-x: hidden;
+  }
+  ::selection { background: var(--c); color: #fff; }
+  :focus-visible { outline: 2px dashed var(--btn); outline-offset: 4px; }
+  svg { display: block; }
+  [hidden] { display: none !important; }
+
+  .top { max-width: 960px; margin: 0 auto; padding: 24px 16px 0; }
+  .back {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 10px 16px;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--pixel);
+    font-size: 12px;
+    text-decoration: none;
+    box-shadow: 0 -2px 0 var(--ink), 0 2px 0 var(--ink), -2px 0 0 var(--ink), 2px 0 0 var(--ink),
+                0 6px 12px -4px rgba(0,0,0,.4);
+    transition: transform .08s;
+  }
+  .back:hover { background: var(--btn); }
+  .back:active { transform: translateY(3px); }
+
+  main { max-width: 960px; margin: 0 auto; padding: 32px 16px 64px; text-align: center; }
+  h1, .marquee { font-family: var(--pixel); font-weight: 400; }
+  .lobby h1 { font-size: 48px; line-height: 1.2; }
+  .lobby h1 span { display: inline-block; animation: flicker 1.8s steps(1, end) infinite; }
+  @keyframes flicker { 0% { color: #ff3b5c; } 17% { color: #ff9f1c; } 33% { color: #ffe14d; } 50% { color: #3ddc84; } 67% { color: #2ec4ff; } 83% { color: #ff4fd8; } }
+  .sub { margin-top: 12px; color: var(--dim); }
+
+  /* ---------- 로비: 게임기 줄 ---------- */
+  .row {
+    display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start;
+    gap: 40px 32px;
+    margin-top: 56px;
+    list-style: none;
+  }
+  .slot { width: 232px; text-decoration: none; color: inherit; display: block; }
+  .machine {
+    display: block;
+    background: var(--c);
+    padding: 14px 14px 16px;
+    border-radius: 20px 20px 8px 8px;
+    box-shadow: 0 26px 40px -20px rgba(0,0,0,.75);
+    transition: transform .18s cubic-bezier(.2,.8,.2,1);
+  }
+  .m-marquee {
+    display: block;
+    padding: 8px 0;
+    background: #fff4f0;
+    color: var(--c-ink);
+    font-family: var(--pixel);
+    font-size: 16px;
+    box-shadow: 0 -3px 0 var(--c-ink), 0 3px 0 var(--c-ink), -3px 0 0 var(--c-ink), 3px 0 0 var(--c-ink);
+  }
+  .sky .m-marquee { background: #eef9ff; }
+  .ice .m-marquee { background: #fff; }
+  .bunny .m-marquee, .blue .m-marquee { background: #fff; }
+  .off .m-marquee { background: #2c3160; color: var(--dim); }
+  .m-screen {
+    position: relative;
+    display: block;
+    margin-top: 14px;
+    aspect-ratio: 4 / 3;
+    background: var(--screen);
+    border: 8px solid var(--c-ink);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .m-start {
+    position: absolute; left: 0; right: 0; bottom: 8px;
+    font-family: var(--pixel); font-size: 12px; color: var(--btn);
+    opacity: 0;
+  }
+  .m-deck { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; }
+  .m-knobs { display: flex; gap: 8px; }
+  .m-knobs i { width: 14px; height: 14px; border-radius: 50%; background: var(--btn); box-shadow: inset 0 -3px 0 var(--btn-deep); }
+  .m-knobs i:nth-child(2) { background: #fff; box-shadow: inset 0 -3px 0 #c9c0aa; }
+  .m-play {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 12px;
+    background: var(--c-ink);
+    color: #fff;
+    font-family: var(--pixel); font-size: 12px;
+  }
+  .m-floor {
+    display: block; height: 6px; margin: 0 6px;
+    background: repeating-linear-gradient(90deg, #ff3b5c 0 6px, transparent 6px 12px, #ffe14d 12px 18px, transparent 18px 24px,
+                                                 #3ddc84 24px 30px, transparent 30px 36px, #2ec4ff 36px 42px, transparent 42px 48px);
+    opacity: .55;
+  }
+  .placard { display: block; margin-top: 18px; text-align: left; padding: 0 6px; }
+  .placard b { display: block; font-family: var(--pixel); font-weight: 400; font-size: 12px; color: var(--btn); }
+  .placard span { display: block; margin-top: 4px; font-size: 14px; line-height: 1.6; color: var(--dim); }
+
+  a.slot:hover .machine, a.slot:focus-visible .machine { transform: translateY(-8px); }
+  a.slot:hover .m-marquee, a.slot:focus-visible .m-marquee { animation: bulbs .5s steps(1, end) infinite; }
+  a.slot:hover .m-start, a.slot:focus-visible .m-start { animation: blink .8s steps(1, end) infinite; opacity: 1; }
+  a.slot:hover .m-floor, a.slot:focus-visible .m-floor { opacity: 1; animation: crawl .6s steps(4) infinite; }
+  a.slot:focus-visible { outline: none; }
+  a.slot:focus-visible .machine { outline: 2px dashed var(--btn); outline-offset: 6px; }
+  @keyframes bulbs { 50% { box-shadow: 0 -3px 0 var(--btn), 0 3px 0 var(--btn), -3px 0 0 var(--btn), 3px 0 0 var(--btn); } }
+  @keyframes crawl { to { background-position: 48px 0; } }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* 미리보기: 달걀 점프 */
+  .pv { position: absolute; inset: 0; }
+  .pv-ground { position: absolute; left: 0; right: 0; bottom: 30px; height: 3px;
+    background: repeating-linear-gradient(90deg, #ff3b5c 0 6px, transparent 6px 12px, #ffe14d 12px 18px, transparent 18px 24px, #2ec4ff 24px 30px, transparent 30px 36px);
+    animation: crawl .5s linear infinite reverse; }
+  .pv-egg { position: absolute; left: 22%; bottom: 33px; animation: hop 2.4s infinite; }
+  .pv-kim { position: absolute; left: 100%; bottom: 33px; animation: slide 2.4s linear infinite; }
+  @keyframes hop {
+    0%, 50% { transform: translateY(0); animation-timing-function: steps(3, end); }
+    62% { transform: translateY(-40px); animation-timing-function: steps(3, end); }
+    76% { transform: translateY(-40px); animation-timing-function: steps(3, end); }
+    88%, 100% { transform: translateY(0); }
+  }
+  @keyframes slide { from { left: 100%; } to { left: -20%; } }
+  .pv-star { position: absolute; width: 3px; height: 3px; background: #3a3f6b; }
+  .pv-star:nth-child(odd) { background: #ffe14d; animation: blink 1.2s steps(1, end) infinite; }
+
+  /* 미리보기: 요트 다이스 */
+  .pv-dice { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 10px; padding-bottom: 14px; }
+  .pv-dice span { width: 44px; transition: transform .15s; }
+  .pv-dice span.held { transform: translateY(-8px); }
+  .pv-dice svg { width: 100%; height: auto; }
+
+  /* 미리보기: 가위바위보 (손 셋 중 하나가 차례로 올라옴) */
+  .pv-hands { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 14px; padding-bottom: 14px; }
+  .pv-hands span { transition: transform .15s; }
+  .pv-hands span.up { transform: translateY(-10px); }
+
+  /* 미리보기: 두더지 잡기 (구멍 셋 중 하나에서 두더지가 차례로 올라옴) */
+  .pv-moles { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 8px; padding-bottom: 14px; background: #5bb04a; background-size: 54px 54px; image-rendering: pixelated; }
+  .pv-moles > span { width: 54px; }
+  .pv-moles .burrow { display: block; width: 72%; aspect-ratio: 14 / 12; margin: 0 auto -16%; overflow: hidden; position: relative; z-index: 1; }
+  .pv-moles .mole { position: absolute; inset: 0; transform: translateY(100%); transition: transform .12s steps(3, end); }
+  .pv-moles .up .mole { transform: translateY(0); }
+  .pv-moles svg { width: 100%; height: auto; }
+
+  /* 미리보기: 벽돌 깨기 (공이 받침대와 벽돌 사이를 오감) */
+  .pv-brick { position: absolute; inset: 0; }
+  .pv-wall { position: absolute; left: 10%; right: 10%; top: 12%; display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; }
+  .pv-wall i { height: 8px; box-shadow: 0 0 0 1px #1d2236, inset 0 2px 0 rgba(255,255,255,.5); }
+  .pv-wall i:nth-child(-n+6) { background: #4f5b74; }   /* 맨 윗줄: 어두운 금속 (brick.html과 같은 색) */
+  .pv-wall i:nth-child(n+7) { background: #5cc8f5; }
+  .pv-wall i:nth-child(n+13) { background: #e8f6ff; }
+  .pv-wall i:nth-child(9) { visibility: hidden; }   /* 이미 깬 벽돌 하나 */
+  .pv-pad { position: absolute; left: 39%; bottom: 18%; width: 22%; height: 5px; background: #5cc8f5; box-shadow: 0 0 0 1px #1d2236, inset 0 2px 0 #e8f6ff; animation: pad 2.4s steps(12, end) infinite; }
+  .pv-ball { position: absolute; width: 6px; height: 6px; background: #f3efe4; box-shadow: 0 0 0 1px #1d2236; animation: ball 2.4s infinite; }
+  @keyframes ball {
+    0%   { left: 49%; top: 70%; animation-timing-function: steps(6, end); }
+    35%  { left: 72%; top: 38%; animation-timing-function: steps(4, end); }
+    55%  { left: 86%; top: 52%; animation-timing-function: steps(8, end); }
+    100% { left: 49%; top: 70%; }
+  }
+  @keyframes pad { 0%, 100% { left: 39%; } 50% { left: 52%; } }
+
+  /* 준비 중 */
+  .pv-off { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--pixel); font-size: 12px; color: var(--dim); }
+  .off .m-knobs i { background: var(--mute); box-shadow: none; }
+  .off .m-play { background: transparent; color: var(--dim); }
+
+  /* ---------- 게임기 (게임 화면) ---------- */
+  .cabinet {
+    margin: 40px auto 0;
+    max-width: 720px;
+    background: var(--c);
+    padding: 20px 20px 28px;
+    border-radius: 24px 24px 12px 12px;
+    box-shadow: 0 30px 50px -20px rgba(0,0,0,.6);
+  }
+  .marquee { font-size: 24px; line-height: 1.4; color: var(--c-ink); margin-bottom: 14px; }
+  .bezel { background: var(--c-ink); padding: 12px; border-radius: 10px; }
+  .screen { position: relative; background: var(--screen); border-radius: 4px; overflow: hidden; }
+  .overlay {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+    font-family: var(--pixel);
+    color: var(--paper);
+    background: rgba(13,16,32,.3);
+    pointer-events: none;
+  }
+  .overlay strong { font-weight: 400; font-size: 24px; color: var(--btn); }
+  .overlay p { font-size: 12px; animation: blink 1s steps(1, end) infinite; }
+
+  .controls { display: flex; justify-content: center; align-items: center; gap: 28px; margin-top: 22px; }
+  .push {
+    flex: none;
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    border: 0;
+    background: var(--btn);
+    box-shadow: inset 0 -4px 0 var(--btn-deep), 0 4px 6px -2px rgba(0,0,0,.4);
+    font-family: var(--pixel); font-size: 12px; color: var(--c-ink);
+    cursor: pointer;
+  }
+  .push:active:not(:disabled) { transform: translateY(4px); box-shadow: inset 0 -2px 0 var(--btn-deep); }
+  .push:disabled { background: var(--c-deep); box-shadow: none; color: var(--c-ink); cursor: default; }
+  .how { font-family: var(--pixel); font-size: 12px; color: var(--c-ink); text-align: left; line-height: 1.8; }
+
+  /* ---------- 요트 다이스 ---------- */
+  .yscreen { padding: 16px 16px 18px; }
+  #yOver { background: rgba(13,16,32,.88); }
+  .yhud { display: flex; justify-content: space-between; font-family: var(--pixel); font-size: 12px; color: var(--paper); }
+  .dice {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px;
+    max-width: 440px; margin: 28px auto 0;
+  }
+  .die {
+    position: relative;
+    padding: 0 0 26px;
+    background: none; border: 0;
+    cursor: pointer;
+    transition: transform .14s cubic-bezier(.2,.8,.2,1);
+    touch-action: manipulation;
+  }
+  .die svg { width: 100%; height: auto; }
+  .die:disabled { cursor: default; }
+  .die.blank svg { opacity: .3; }
+  .die[aria-pressed="true"] { transform: translateY(-12px); }
+  .die[aria-pressed="true"]::after {
+    content: "킵";
+    position: absolute; left: 50%; bottom: 0; transform: translateX(-50%);
+    padding: 0 8px;
+    background: var(--btn); color: var(--ink);
+    font-family: var(--pixel); font-size: 12px; line-height: 20px;
+  }
+  .die:not(:disabled):hover svg { filter: brightness(1.08); }
+  .host { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 10px; min-height: 52px; }
+  .host-line { font-family: var(--pixel); font-size: 12px; color: var(--paper); text-align: left; }
+  .host.cheer svg { animation: cheer .5s steps(2, end) 3; }
+  @keyframes cheer { 50% { transform: translateY(-8px); } }
+
+  .rolls { display: inline-flex; gap: 4px; vertical-align: middle; margin-left: 6px; }
+  .rolls i { width: 10px; height: 10px; background: #fff; }
+  .rolls i.used { background: var(--c-deep); }
+
+  .sheet { margin-top: 22px; }
+  .sheet-in {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px;
+    padding: 16px;
+    background: var(--screen);
+    border-radius: 4px;
+    text-align: left;
+  }
+  .sheet h2 { font-family: var(--pixel); font-weight: 400; font-size: 12px; color: var(--dim); padding: 0 10px 6px; }
+  .cat {
+    width: 100%;
+    display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+    min-height: 48px;
+    padding: 6px 10px;
+    background: transparent; border: 0; border-radius: 4px;
+    color: var(--paper);
+    font: inherit; text-align: left;
+    cursor: pointer;
+  }
+  .cat + .cat { margin-top: 2px; }
+  .cat:hover:not(:disabled) { background: var(--room-2); }
+  .cat:disabled { cursor: default; }
+  .cat-name { font-family: var(--pixel); font-size: 12px; line-height: 1.5; }
+  .cat-hint { display: block; font-family: var(--sans); font-size: 12px; line-height: 1.45; color: var(--dim); }
+  .cat-score { min-width: 3ch; text-align: right; font-family: var(--pixel); font-size: 16px; font-variant-numeric: tabular-nums; color: var(--dim); }
+  .cat.ready .cat-score { color: var(--btn); }
+  .cat.ready.zero .cat-score { color: var(--dim); }
+  .cat.done { background: #12152b; }
+  .cat.done .cat-name, .cat.done .cat-hint { color: var(--dim); }
+  .cat.done .cat-score { color: var(--paper); }
+  .cat.fresh { animation: stamp .6s steps(2, end) 2; }
+  @keyframes stamp { 50% { background: var(--room-2); } }
+  .bonus { padding: 12px 10px 4px; font-family: var(--pixel); font-size: 12px; color: var(--dim); }
+  .bar { height: 8px; margin-top: 8px; background: var(--room-2); }
+  .bar i { display: block; height: 100%; background: var(--btn); transform: scaleX(0); transform-origin: left; transition: transform .3s steps(6, end); }
+  .bonus.got { color: var(--btn); }
+  .total {
+    grid-column: 1 / -1;
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-top: 12px; padding: 14px 10px 2px;
+    border-top: 2px solid var(--room-2);
+    font-family: var(--pixel); font-size: 12px; color: var(--dim);
+  }
+  .total strong { font-weight: 400; font-size: 24px; color: var(--btn); font-variant-numeric: tabular-nums; }
+
+  @media (max-width: 600px) {
+    .lobby h1 { font-size: 36px; }
+    .cabinet { padding: 14px 12px 20px; }
+    .bezel { padding: 8px; }
+    .sheet-in { grid-template-columns: 1fr; padding: 12px 8px; }
+    .dice { gap: 8px; }
+    .controls { gap: 20px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <a class="back" href="index.html" id="back"><span data-back></span><span id="backText">뒤로가기</span></a>
+</header>
+
+<main>
+  <!-- ========== 로비: 게임 목록 ========== -->
+  <section class="lobby" data-view="lobby">
+    <h1><span>호성</span> 오락실</h1>
+    <p class="sub">하고 싶은 게임기 앞에 서 보세요. 방향키로 고르고 엔터로 시작해요.</p>
+
+    <ul class="row">
+      <li>
+        <a class="slot" href="runner.html" aria-label="달걀 점프 하러 가기">
+          <span class="machine">
+            <span class="m-marquee">달걀 점프</span>
+            <span class="m-screen" aria-hidden="true">
+              <span class="pv" data-stars></span>
+              <span class="pv-ground"></span>
+              <span class="pv-kim" data-pv-kim></span>
+              <span class="pv-egg" data-pv-egg></span>
+              <span class="m-start">눌러서 시작</span>
+            </span>
+            <span class="m-deck"><span class="m-knobs"><i></i><i></i></span><span class="m-play">플레이<span data-arrow></span></span></span>
+          </span>
+          <span class="m-floor"></span>
+          <span class="placard"><b data-best-jump>최고 0m</b><span>김밥과 닭강정을 뛰어넘으며 멀리멀리 걸어가요.</span></span>
+        </a>
+      </li>
+      <li>
+        <a class="slot sky" href="#yacht" aria-label="요트 다이스 하러 가기">
+          <span class="machine">
+            <span class="m-marquee">요트 다이스</span>
+            <span class="m-screen" aria-hidden="true">
+              <span class="pv-dice" data-pv-dice><span></span><span></span><span></span></span>
+              <span class="m-start">눌러서 시작</span>
+            </span>
+            <span class="m-deck"><span class="m-knobs"><i></i><i></i></span><span class="m-play">플레이<span data-arrow></span></span></span>
+          </span>
+          <span class="m-floor"></span>
+          <span class="placard"><b data-best-yacht>최고 0점</b><span>주사위 다섯 개로 족보를 만들어 12칸을 채워요.</span></span>
+        </a>
+      </li>
+      <li>
+        <a class="slot ice" href="rps.html" aria-label="가위바위보 하러 가기">
+          <span class="machine">
+            <span class="m-marquee">가위바위보</span>
+            <span class="m-screen" aria-hidden="true">
+              <span class="pv-hands" data-pv-hands><span></span><span></span><span></span></span>
+              <span class="m-start">눌러서 시작</span>
+            </span>
+            <span class="m-deck"><span class="m-knobs"><i></i><i></i></span><span class="m-play">플레이<span data-arrow></span></span></span>
+          </span>
+          <span class="m-floor"></span>
+          <span class="placard"><b data-best-rps>최고 0연승</b><span>가위, 바위, 보! 달걀과 겨뤄 몇 번 연속 이길 수 있을까요?</span></span>
+        </a>
+      </li>
+      <li>
+        <a class="slot bunny" href="mole.html" aria-label="두더지 잡기 하러 가기">
+          <span class="machine">
+            <span class="m-marquee">두더지 잡기</span>
+            <span class="m-screen" aria-hidden="true">
+              <span class="pv-moles" data-pv-moles><span></span><span></span><span></span></span>
+              <span class="m-start">눌러서 시작</span>
+            </span>
+            <span class="m-deck"><span class="m-knobs"><i></i><i></i></span><span class="m-play">플레이<span data-arrow></span></span></span>
+          </span>
+          <span class="m-floor"></span>
+          <span class="placard"><b data-best-mole>최고 0점</b><span>30초 동안 구멍에서 튀어나오는 두더지를 잡아요.</span></span>
+        </a>
+      </li>
+      <li>
+        <a class="slot blue" href="brick.html" aria-label="벽돌 깨기 하러 가기">
+          <span class="machine">
+            <span class="m-marquee">벽돌 깨기</span>
+            <span class="m-screen" aria-hidden="true">
+              <span class="pv-brick"><span class="pv-wall"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="pv-pad"></span><span class="pv-ball"></span></span>
+              <span class="m-start">눌러서 시작</span>
+            </span>
+            <span class="m-deck"><span class="m-knobs"><i></i><i></i></span><span class="m-play">플레이<span data-arrow></span></span></span>
+          </span>
+          <span class="m-floor"></span>
+          <span class="placard"><b data-best-brick>최고 0점</b><span>받침대로 공을 튕겨 벽돌을 모두 깨요.</span></span>
+        </a>
+      </li>
+      <li>
+        <div class="slot off" aria-label="준비 중인 게임기">
+          <span class="machine">
+            <span class="m-marquee">???</span>
+            <span class="m-screen" aria-hidden="true"><span class="pv-off">다음 게임 준비 중</span></span>
+            <span class="m-deck"><span class="m-knobs"><i></i><i></i></span><span class="m-play">곧 만나요</span></span>
+          </span>
+          <span class="placard"><b>준비 중</b><span>새 게임기가 들어올 자리예요.</span></span>
+        </div>
+      </li>
+    </ul>
+  </section>
+
+  <!-- ========== 요트 다이스 ========== -->
+  <section data-view="yacht" hidden>
+    <p class="sub">주사위를 세 번까지 굴려 족보를 만들고, 12칸을 모두 채우면 끝나요.</p>
+    <section class="cabinet sky" aria-label="요트 다이스 게임기">
+      <h1 class="marquee">요트 다이스</h1>
+      <div class="bezel">
+        <div class="screen yscreen">
+          <div class="yhud"><span id="yTurn">1 / 12 턴</span><span id="yBest">최고 0점</span></div>
+          <div class="dice" id="dice"></div>
+          <div class="host" id="host"><span data-host></span><span class="host-line" id="hostLine" aria-live="polite">주사위를 굴려 볼까요?</span></div>
+          <div class="overlay" id="yOver" hidden><strong id="yOvTitle"></strong><p id="yOvText"></p></div>
+        </div>
+      </div>
+      <div class="controls">
+        <button type="button" class="push" id="rollBtn">굴리기</button>
+        <p class="how">남은 굴림<span class="rolls" id="rolls"><i></i><i></i><i></i></span><br>주사위를 누르면 킵(고정)돼요</p>
+      </div>
+      <div class="bezel sheet">
+        <div class="sheet-in">
+          <div><h2>숫자 칸</h2><div id="upperCats"></div>
+            <div class="bonus" id="bonus">보너스 <span id="upperSum">0</span> / 63 → +35<div class="bar"><i id="bonusBar"></i></div></div>
+          </div>
+          <div><h2>족보 칸</h2><div id="lowerCats"></div></div>
+          <div class="total">합계<strong id="total">0</strong></div>
+        </div>
+      </div>
+    </section>
+  </section>
+</main>
+
+<script>
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const store = {
+    get(k) { try { return Number(localStorage.getItem(k)) || 0; } catch (_) { return 0; } },
+    set(k, v) { try { localStorage.setItem(k, String(v)); } catch (_) {} },
+  };
+
+  // ---------- 도트 그리기 ----------
+  function pix(map, pal, px, outline) {
+    const h = map.length, w = map[0].length, o = outline ? 1 : 0;
+    const on = (x, y) => y >= 0 && y < h && x >= 0 && x < w && map[y][x] !== '.';
+    const rect = (x, y, f) => `<rect x="${x}" y="${y}" width="1" height="1" fill="${f}"/>`;
+    let r = '';
+    if (outline) {
+      for (let y = -1; y <= h; y++) for (let x = -1; x <= w; x++) {
+        if (!on(x, y) && (on(x - 1, y) || on(x + 1, y) || on(x, y - 1) || on(x, y + 1))) r += rect(x + o, y + o, outline);
+      }
+    }
+    map.forEach((row, y) => [...row].forEach((c, x) => { if (pal[c]) r += rect(x + o, y + o, pal[c]); }));
+    const W = w + 2 * o, H = h + 2 * o;
+    return `<svg viewBox="0 0 ${W} ${H}" width="${W * px}" height="${H * px}" shape-rendering="crispEdges" aria-hidden="true">${r}</svg>`;
+  }
+  const BACK_ARROW = ['...o', '..oo', '.ooo', 'oooo', '.ooo', '..oo', '...o'];
+  const ARROW = ['o...', 'oo..', 'ooo.', 'oooo', 'ooo.', 'oo..', 'o...'];
+  document.querySelector('[data-back]').innerHTML = pix(BACK_ARROW, { o: '#1d2236' }, 2);
+  document.querySelectorAll('[data-arrow]').forEach(el => { el.innerHTML = pix(ARROW, { o: '#ffcf3f' }, 2); });
+
+  // ---------- 스프라이트 (index.html과 같은 도트 설계도) ----------
+  const EGG = [
+    '...wwww...',
+    '..wwwwww..',
+    '.wwwwwwws.',
+    '.wwwwwwws.',
+    'wwwwwwwwws',
+    'wwewwwwews',
+    'wbwwmmwwbs',
+    'wwwwwwwwss',
+    'wwwwwwwwss',
+    '.wwwwwwss.',
+    '..wwwsss..',
+    '...ssss...',
+  ];
+  const EGG_COLORS = { w: '#f3efe4', s: '#c9c0aa', e: '#151515', m: '#151515', b: '#e07a6f' };
+  const KIMBAP = [
+    '..kkkkk..',
+    '.kwwwwwk.',
+    'kwwygwwwk',
+    'kwppppywk',
+    'kwppppgwk',
+    'kwwgyywwk',
+    'kwwwwwwwk',
+    '.kwwwwwk.',
+    '..kkkkk..',
+  ];
+  const KIMBAP_COLORS = { k: '#3a4a33', w: '#ffffff', p: '#ff8fa3', y: '#ffd84a', g: '#5fb35a' };
+  // 주사위: 달걀 껍질 색 면 + 그림자, 1은 빨간 눈 (16×16)
+  const PIPS = { 1: [[6, 6]], 2: [[2, 2], [10, 10]], 3: [[2, 2], [6, 6], [10, 10]], 4: [[2, 2], [10, 2], [2, 10], [10, 10]],
+                 5: [[2, 2], [10, 2], [6, 6], [2, 10], [10, 10]], 6: [[2, 2], [10, 2], [2, 6], [10, 6], [2, 10], [10, 10]] };
+  function dieMap(n) {
+    const g = [];
+    for (let y = 0; y < 16; y++) {
+      let row = '';
+      for (let x = 0; x < 16; x++) {
+        const corner = (x === 0 || x === 15) && (y === 0 || y === 15);
+        row += corner ? '.' : (x === 15 || y === 15) ? 's' : 'w';
+      }
+      g.push([...row]);
+    }
+    (PIPS[n] || []).forEach(([px, py]) => {
+      for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) g[py + y][px + x] = n === 1 ? 'r' : 'p';
+    });
+    return g.map(r => r.join(''));
+  }
+  const DIE_COLORS = { w: '#f3efe4', s: '#c9c0aa', p: '#1d2236', r: '#e5484d' };
+  const DIE_SVG = [0, 1, 2, 3, 4, 5, 6].map(n => pix(dieMap(n), DIE_COLORS, 4, '#1d2236'));
+
+  // ---------- 화면 전환 (#yacht / 없으면 목록). 달걀 점프는 runner.html로 분리 ----------
+  const views = {};
+  document.querySelectorAll('[data-view]').forEach(el => { views[el.dataset.view] = el; });
+  const backLink = document.getElementById('back'), backText = document.getElementById('backText');
+  let view = null, cameFromLobby = false;
+
+  function route() {
+    const h = location.hash.slice(1);
+    if (h === 'jump') { location.replace('runner.html'); return; }   // 예전 주소(#jump)로 오면 분리된 달걀 점프 페이지로
+    const next = views[h] && h !== 'lobby' ? h : 'lobby';
+    if (view === 'lobby' && next !== 'lobby') cameFromLobby = true;
+    if (next === 'lobby') cameFromLobby = false;
+    view = next;
+    Object.entries(views).forEach(([k, el]) => { el.hidden = k !== view; });
+    backText.textContent = view === 'lobby' ? '뒤로가기' : '게임 목록';
+    backLink.setAttribute('href', view === 'lobby' ? 'index.html' : '#');
+    document.title = { lobby: '호성 오락실', yacht: '요트 다이스 · 호성 오락실' }[view];
+    if (view === 'lobby') refreshLobby();
+    window.scrollTo(0, 0);
+  }
+  window.addEventListener('hashchange', route);
+
+  backLink.addEventListener('click', (e) => {
+    if (view !== 'lobby') {
+      e.preventDefault();
+      if (cameFromLobby) history.back();
+      else { history.replaceState(null, '', location.pathname + location.search); route(); }
+      return;
+    }
+    // 목록에서 index.html로: index.html에서 왔으면 브라우저 뒤로가기로(스크롤 위치 유지)
+    let fromIndex = false;
+    try { fromIndex = /index\.html|\/my-game\/?$/.test(new URL(document.referrer).pathname); } catch (_) {}
+    if (fromIndex && history.length > 1) { e.preventDefault(); history.back(); }
+  });
+
+  // ---------- 로비 ----------
+  const slots = [...document.querySelectorAll('a.slot')];
+  document.addEventListener('keydown', (e) => {
+    if (view !== 'lobby' || (e.code !== 'ArrowRight' && e.code !== 'ArrowLeft')) return;
+    const i = slots.indexOf(document.activeElement);
+    const next = i < 0 ? 0 : (i + (e.code === 'ArrowRight' ? 1 : -1) + slots.length) % slots.length;
+    e.preventDefault();
+    slots[next].focus();
+  });
+
+  document.querySelector('[data-pv-egg]').innerHTML = pix(EGG, EGG_COLORS, 3, '#1d2236');
+  document.querySelector('[data-pv-kim]').innerHTML = pix(KIMBAP, KIMBAP_COLORS, 3);
+  document.querySelector('[data-stars]').innerHTML = Array.from({ length: 10 }, (_, i) =>
+    `<i class="pv-star" style="left:${(i * 37 + 9) % 96}%;top:${(i * 23 + 8) % 52}%"></i>`).join('');
+
+  const pvDice = [...document.querySelectorAll('[data-pv-dice] span')];
+  let pvFaces = [3, 5, 6], pvTick = 0;
+  function drawPreviewDice() {
+    pvDice.forEach((el, i) => { el.innerHTML = DIE_SVG[pvFaces[i]]; el.classList.toggle('held', i === 1 && pvTick % 4 > 1); });
+  }
+  drawPreviewDice();
+  if (!reduceMotion) setInterval(() => {
+    if (view !== 'lobby') return;
+    pvTick++;
+    pvFaces = pvFaces.map((f, i) => (i === 1 && pvTick % 4 > 1) ? f : 1 + Math.floor(Math.random() * 6));
+    drawPreviewDice();
+  }, 700);
+
+  // 가위바위보 미리보기: 도트 손 셋 (rps.html과 같은 설계도)
+  const HANDS = {
+    scissors: ['kk.....kk..', 'kk.....kk..', '.kk...kk...', '.kk...kk...', '..kk.kk....', '..kkkkk....', '.kkkkkkkk..',
+               'kkkkkkkkks.', 'kksskkkkks.', 'kkkkkkkkss.', '.kkkkkkss..', '..kkkkss...', '..kkkkss...'],
+    rock:     ['.kk.kk.kk...', 'kkkkkkkkkk..', 'kkkkkkkkkks.', 'kksssssskks.', 'kkkkkkkkkkks', 'kkkkkkkkkkks',
+               '.kkkkkkkkks.', '..kkkkkkss..', '..kkkkkss...', '..kkkkkss...'],
+    paper:    ['..k.k.k.k....', '..k.k.k.k....', '..k.k.k.k....', '..k.k.k.k....', '..kkkkkkk...k', '..kkkkkkk..kk',
+               '..kkkkkkkkkk.', '..kkkkkkkkk..', '..kkkkkkkks..', '...kkkkkkss..', '...kkkkkss...', '....kkkkss...', '....kkkkss...'],
+  };
+  const HAND_COLORS = { k: '#f3efe4', s: '#c9c0aa' };
+  const pvHands = [...document.querySelectorAll('[data-pv-hands] span')];
+  ['scissors', 'rock', 'paper'].forEach((h, i) => { pvHands[i].innerHTML = pix(HANDS[h], HAND_COLORS, 3, '#1d2236'); });
+  let pvHandUp = 0;
+  pvHands[0].classList.add('up');
+  if (!reduceMotion) setInterval(() => {
+    if (view !== 'lobby') return;
+    pvHandUp = (pvHandUp + 1) % 3;
+    pvHands.forEach((el, i) => el.classList.toggle('up', i === pvHandUp));
+  }, 700);
+
+  // 두더지 잡기 미리보기 (mole.html과 같은 설계도)
+  const MOLE = ['...bbbbbb...', '..bbbbbbbd..', '.bbbbbbbbbd.', '.bbebbbbebd.', '.bcbbbbbbcd.', 'bbbbnnnnbbdd',
+                'bbblnnnnlbdd', 'bbllllllllbd', 'bbbllttllbdd', 'bbbbbttbbbdd', 'bbbbbbbbbddd'];
+  const MOLE_COLORS = { b: '#8a5a3c', d: '#5e3a26', e: '#151515', n: '#ff8fa3', l: '#e3c29b', t: '#ffffff', c: '#e07a6f' };
+  const PIT = ['...rrrrrrrr...', '.rrkkkkkkkkrr.', 'rkkkkkkkkkkkkr', 'rhkkkkkkkkkkhr', '.rhhkkkkkkhhr.', '...rrrrrrrr...'];
+  const PIT_COLORS = { r: '#a8754e', h: '#5e3a26', k: '#2a170d' };
+  // 잔디밭 바닥: 24×24 도트 타일을 만들어 반복해서 깐다. g 잔디, d 진한 풀잎, l 밝은 풀잎, f 꽃잎, y 꽃술
+  function grassTile() {
+    const g = Array.from({ length: 24 }, () => Array(24).fill('g'));
+    const tuft = (x, y, c) => { g[y][x + 1] = c; g[y + 1][x] = c; g[y + 1][x + 2] = c; };
+    const flower = (x, y) => { g[y][x + 1] = g[y + 1][x] = g[y + 1][x + 2] = g[y + 2][x + 1] = 'f'; g[y + 1][x + 1] = 'y'; };
+    [[2, 1, 'd'], [13, 3, 'l'], [19, 8, 'd'], [5, 10, 'l'], [15, 12, 'd'], [10, 17, 'd'], [20, 18, 'l'], [1, 20, 'd'], [8, 6, 'd']]
+      .forEach(([x, y, c]) => tuft(x, y, c));
+    flower(17, 1); flower(3, 15);
+    return g.map(r => r.join(''));
+  }
+  const GRASS_COLORS = { g: '#5bb04a', d: '#3f8a3a', l: '#86d065', f: '#ffffff', y: '#ffcf3f' };
+
+  const pvMoles = [...document.querySelectorAll('[data-pv-moles] > span')];
+  const pvMoleSVG = `<span class="burrow"><span class="mole">${pix(MOLE, MOLE_COLORS, 3, '#1d2236')}</span></span>${pix(PIT, PIT_COLORS, 3)}`;
+  pvMoles.forEach(el => { el.innerHTML = pvMoleSVG; });
+  document.querySelector('[data-pv-moles]').style.backgroundImage = `url("data:image/svg+xml,${encodeURIComponent(pix(grassTile(), GRASS_COLORS, 3).replace("<svg ", "<svg xmlns='http://www.w3.org/2000/svg' "))}")`;
+  let pvMoleUp = 1;
+  pvMoles[1].classList.add('up');
+  if (!reduceMotion) setInterval(() => {
+    if (view !== 'lobby') return;
+    pvMoleUp = (pvMoleUp + 1 + Math.floor(Math.random() * 2)) % 3;
+    pvMoles.forEach((el, i) => el.classList.toggle('up', i === pvMoleUp));
+  }, 800);
+
+  function refreshLobby() {
+    document.querySelector('[data-best-jump]').textContent = `최고 ${store.get('egg-jump-best')}m`;
+    document.querySelector('[data-best-yacht]').textContent = `최고 ${store.get('yacht-best')}점`;
+    document.querySelector('[data-best-rps]').textContent = `최고 ${store.get('rps-best-streak')}연승`;
+    document.querySelector('[data-best-mole]').textContent = `최고 ${store.get('mole-best')}점`;
+    document.querySelector('[data-best-brick]').textContent = `최고 ${store.get('brick-best')}점`;
+  }
+
+  // ==================== 요트 다이스 ====================
+  const CATS = [
+    { id: 'n1', name: '1 모으기', face: 1 }, { id: 'n2', name: '2 모으기', face: 2 }, { id: 'n3', name: '3 모으기', face: 3 },
+    { id: 'n4', name: '4 모으기', face: 4 }, { id: 'n5', name: '5 모으기', face: 5 }, { id: 'n6', name: '6 모으기', face: 6 },
+    { id: 'choice', name: '초이스', hint: '눈 다섯 개를 전부 더해요' },
+    { id: 'four', name: '포카인드', hint: '같은 눈 4개 이상이면 전부 더해요' },
+    { id: 'full', name: '풀하우스', hint: '같은 눈 3개 + 2개면 전부 더해요' },
+    { id: 'ss', name: '스몰 스트레이트', hint: '이어지는 숫자 4개 · 15점' },
+    { id: 'ls', name: '라지 스트레이트', hint: '이어지는 숫자 5개 · 30점' },
+    { id: 'yacht', name: '요트', hint: '다섯 개 모두 같은 눈 · 50점' },
+  ];
+  const TURNS = CATS.length, BONUS_AT = 63, BONUS = 35;
+
+  function scoreOf(id, d) {
+    const c = [0, 0, 0, 0, 0, 0, 0];
+    d.forEach(v => c[v]++);
+    const sum = d.reduce((a, b) => a + b, 0);
+    const has = (...ns) => ns.every(n => c[n] > 0);
+    switch (id) {
+      case 'choice': return sum;
+      case 'four': return c.some(x => x >= 4) ? sum : 0;
+      case 'full': return c.includes(3) && c.includes(2) ? sum : 0;
+      case 'ss': return has(1, 2, 3, 4) || has(2, 3, 4, 5) || has(3, 4, 5, 6) ? 15 : 0;
+      case 'ls': return has(1, 2, 3, 4, 5) || has(2, 3, 4, 5, 6) ? 30 : 0;
+      case 'yacht': return c.includes(5) ? 50 : 0;
+      default: { const n = Number(id.slice(1)); return n * c[n]; }
+    }
+  }
+
+  const diceBox = document.getElementById('dice');
+  const rollBtn = document.getElementById('rollBtn');
+  const hostEl = document.getElementById('host'), hostLine = document.getElementById('hostLine');
+  const yOver = document.getElementById('yOver');
+  document.querySelector('[data-host]').innerHTML = pix(EGG, EGG_COLORS, 3, '#1d2236');
+
+  const dieBtns = Array.from({ length: 5 }, (_, i) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'die';
+    b.addEventListener('click', () => toggleHold(i));
+    diceBox.appendChild(b);
+    return b;
+  });
+  const catBtns = {};
+  CATS.forEach(cat => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'cat';
+    const label = cat.face
+      ? `${pix(dieMap(cat.face), DIE_COLORS, 1.5, '#1d2236')}<span class="cat-name">${cat.name}</span>`
+      : `<span class="cat-name" style="grid-column:1 / 3">${cat.name}<span class="cat-hint">${cat.hint}</span></span>`;
+    b.innerHTML = `${label}<span class="cat-score">-</span>`;
+    b.addEventListener('click', () => pick(cat.id));
+    document.getElementById(cat.face ? 'upperCats' : 'lowerCats').appendChild(b);
+    catBtns[cat.id] = b;
+  });
+
+  let dice, held, rolls, turn, sheet, rolling = false, over = false;
+  let yBest = store.get('yacht-best');
+
+  function newGame() {
+    dice = [0, 0, 0, 0, 0]; held = [false, false, false, false, false];
+    rolls = 0; turn = 1; sheet = {}; over = false;
+    yOver.hidden = true;
+    say('주사위를 굴려 볼까요?');
+    render();
+  }
+
+  function say(line, cheer) {
+    hostLine.textContent = line;
+    hostEl.classList.remove('cheer');
+    if (cheer) { void hostEl.offsetWidth; hostEl.classList.add('cheer'); }
+  }
+
+  const upperSum = () => CATS.filter(c => c.face).reduce((a, c) => a + (sheet[c.id] || 0), 0);
+  const totalScore = () => Object.values(sheet).reduce((a, b) => a + b, 0) + (upperSum() >= BONUS_AT ? BONUS : 0);
+
+  function render() {
+    const canHold = rolls > 0 && rolls < 3 && !rolling && !over;
+    dieBtns.forEach((b, i) => {
+      b.innerHTML = DIE_SVG[dice[i]];
+      b.classList.toggle('blank', !dice[i]);
+      b.disabled = !canHold;
+      b.setAttribute('aria-pressed', String(held[i]));
+      b.setAttribute('aria-label', dice[i] ? `${i + 1}번 주사위 ${dice[i]}${held[i] ? ', 킵' : ''}` : `${i + 1}번 주사위, 아직 안 굴림`);
+    });
+    rollBtn.textContent = over ? '새 게임' : '굴리기';
+    rollBtn.disabled = !over && (rolling || rolls >= 3);
+    document.querySelectorAll('#rolls i').forEach((el, i) => el.classList.toggle('used', i < rolls));
+
+    CATS.forEach(cat => {
+      const b = catBtns[cat.id], done = sheet[cat.id] != null, ready = !done && rolls > 0 && !rolling && !over;
+      const v = done ? sheet[cat.id] : ready ? scoreOf(cat.id, dice) : null;
+      b.querySelector('.cat-score').textContent = v == null ? '-' : v;
+      b.classList.toggle('done', done);
+      b.classList.toggle('ready', ready);
+      b.classList.toggle('zero', ready && v === 0);
+      b.disabled = !ready;
+      b.setAttribute('aria-label', done ? `${cat.name} ${v}점 적음` : ready ? `${cat.name}에 ${v}점 적기` : `${cat.name}, 굴린 뒤 적을 수 있어요`);
+    });
+
+    const up = upperSum();
+    document.getElementById('upperSum').textContent = up;
+    document.getElementById('bonusBar').style.transform = `scaleX(${Math.min(up / BONUS_AT, 1)})`;
+    document.getElementById('bonus').classList.toggle('got', up >= BONUS_AT);
+    document.getElementById('total').textContent = totalScore();
+    document.getElementById('yTurn').textContent = over ? '게임 끝' : `${turn} / ${TURNS} 턴`;
+    document.getElementById('yBest').textContent = `최고 ${yBest}점`;
+  }
+
+  function toggleHold(i) {
+    if (rolls === 0 || rolls >= 3 || rolling || over) return;
+    held[i] = !held[i];
+    render();
+  }
+
+  function roll() {
+    if (over) { newGame(); return; }
+    if (rolling || rolls >= 3) return;
+    rolls++;
+    const final = dice.map((v, i) => held[i] && v ? v : 1 + Math.floor(Math.random() * 6));
+    if (reduceMotion) { dice = final; afterRoll(); return; }
+    rolling = true;
+    let frame = 0;
+    const spin = setInterval(() => {
+      dice = dice.map((v, i) => held[i] && v ? v : 1 + Math.floor(Math.random() * 6));
+      render();
+      if (++frame >= 7) { clearInterval(spin); dice = final; rolling = false; afterRoll(); }
+    }, 55);
+    render();
+  }
+
+  function afterRoll() {
+    const s = id => scoreOf(id, dice);
+    if (s('yacht')) say('요트다!! 50점짜리예요!', true);
+    else if (s('ls')) say('라지 스트레이트! 쭉 이어졌어요', true);
+    else if (s('four')) say('포카인드! 같은 눈이 네 개예요');
+    else if (s('full')) say('풀하우스가 떴어요');
+    else if (s('ss')) say('스몰 스트레이트 됐어요');
+    else if (rolls < 3) say('남길 주사위를 눌러 킵하고 다시 굴려요');
+    else say('이제 아래 칸 중 하나에 적어요');
+    render();
+  }
+
+  function pick(id) {
+    if (rolls === 0 || rolling || over || sheet[id] != null) return;
+    const hadBonus = upperSum() >= BONUS_AT;
+    const v = scoreOf(id, dice);
+    sheet[id] = v;
+    const cat = CATS.find(c => c.id === id);
+    const b = catBtns[id];
+    b.classList.remove('fresh'); void b.offsetWidth; b.classList.add('fresh');
+
+    if (!hadBonus && upperSum() >= BONUS_AT) say('보너스 달성! +35점이에요', true);
+    else say(v ? `${cat.name}에 ${v}점 적었어요` : `${cat.name}은 0점… 다음엔 꼭!`);
+
+    turn++;
+    dice = [0, 0, 0, 0, 0]; held = [false, false, false, false, false]; rolls = 0;
+    if (turn > TURNS) finish();
+    render();
+  }
+
+  function finish() {
+    over = true;
+    const total = totalScore();
+    const record = total > yBest;
+    if (record) { yBest = total; store.set('yacht-best', yBest); }
+    document.getElementById('yOvTitle').textContent = `${total}점!`;
+    document.getElementById('yOvText').textContent = record ? '새 최고 기록이에요' : '새 게임 버튼으로 다시 해요';
+    yOver.hidden = false;
+    say(record ? '최고 기록 갱신! 대단해요' : '수고했어요! 한 판 더?', record);
+  }
+
+  rollBtn.addEventListener('click', roll);
+
+  // ---------- 키보드 ----------
+  document.addEventListener('keydown', (e) => {
+    if (view === 'yacht' && !e.repeat) {
+      const onButton = e.target.closest && e.target.closest('button, a');
+      if (e.code === 'Space' && !onButton) { e.preventDefault(); roll(); }
+      const n = /^Digit([1-5])$/.exec(e.code);
+      if (n) toggleHold(Number(n[1]) - 1);
+    }
+  });
+
+  newGame();
+  route();
+</script>
+</body>
+</html>

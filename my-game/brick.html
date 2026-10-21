@@ -1,0 +1,1083 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>벽돌 깨기 · 호성 오락실</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 12' shape-rendering='crispEdges'%3E%3Cpath fill='%23f3efe4' d='M3 0h4v1h1v1h1v2h1v5h-1v2h-2v1h-4v-1h-2v-2h-1v-5h1v-2h1v-1h1z'/%3E%3Cpath fill='%23151515' d='M2 5h1v1h-1zM7 5h1v1h-1zM4 6h2v1h-2z'/%3E%3Cpath fill='%23e07a6f' d='M1 6h1v1h-1zM8 6h1v1h-1z'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/galmuri.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/pretendard.css">
+<style>
+  :root {
+    --room: #171a2e;
+    --room-2: #22264a;
+    --ink: #1d2236;
+    --paper: #f1f2f7;
+    --dim: #a9aecb;
+    --screen: #0d1020;
+    --btn: #ffcf3f;
+    --btn-deep: #c99a12;
+    --ion-blue: #0a5fd1;
+    --ion-deep: #06357a;
+    --ion-sky: #5cc8f5;
+    --ion-ice: #e8f6ff;
+    --ion-fizz: #9ee8ff;
+    --ion-lime: #c6f04a;     /* 점수·신기록 */
+    --warn: #ff5a6e;         /* 목숨을 잃었을 때·게임 오버에만 */
+    /* 게임기 몸통 색: 벽돌 깨기는 진한 이온 파랑(.blue) */
+    --c: #0a5fd1;
+    --c-deep: #5cc8f5;
+    --c-ink: #06357a;
+    --pixel: "Galmuri11", monospace;
+    --sans: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    background-color: var(--room);
+    color: var(--paper);
+    font-family: var(--sans);
+    line-height: 1.7;
+    word-break: keep-all;
+    overflow-x: hidden;
+  }
+  ::selection { background: var(--c-deep); color: #fff; }
+  :focus-visible { outline: 2px dashed var(--btn); outline-offset: 4px; }
+  svg { display: block; }
+  [hidden] { display: none !important; }
+
+  .top { max-width: 960px; margin: 0 auto; padding: 24px 16px 0; }
+  .back {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 10px 16px;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--pixel);
+    font-size: 12px;
+    text-decoration: none;
+    box-shadow: 0 -2px 0 var(--ink), 0 2px 0 var(--ink), -2px 0 0 var(--ink), 2px 0 0 var(--ink),
+                0 6px 12px -4px rgba(0,0,0,.4);
+    transition: transform .08s;
+  }
+  .back:hover { background: var(--btn); }
+  .back:active { transform: translateY(3px); }
+
+  main { max-width: 960px; margin: 0 auto; padding: 32px 16px 64px; text-align: center; }
+  .sub { color: var(--dim); }
+
+  /* ---------- 게임기 ---------- */
+  .cabinet {
+    position: relative;
+    margin: 32px auto 0;
+    max-width: 640px;
+    background: var(--c);
+    padding: 24px 24px 28px;
+    border-radius: 24px 24px 12px 12px;
+    box-shadow: 0 30px 50px -20px rgba(0,0,0,.6);
+  }
+  /* 몸통에 붙은 탄산 방울 장식 */
+  .fizz { position: absolute; inset: 0; pointer-events: none; }
+  .fizz i {
+    position: absolute;
+    border: 2px solid var(--ion-fizz);
+    background: #fff;
+    animation: rise 2.4s steps(4, end) infinite;
+  }
+  @keyframes rise { 50% { transform: translateY(-4px); } }
+
+  .marquee {
+    position: relative;
+    display: inline-block;
+    padding: 12px 28px;
+    background: #fff;
+    font-family: var(--pixel);
+    font-weight: 400;
+    font-size: 36px;
+    line-height: 1.2;
+    color: var(--c-ink);
+    box-shadow: 0 -4px 0 var(--c-ink), 0 4px 0 var(--c-ink), -4px 0 0 var(--c-ink), 4px 0 0 var(--c-ink);
+    animation: bulbs 1.6s steps(1, end) infinite;
+  }
+  /* 테두리 전구가 노랑 ↔ 남색으로 천천히 깜빡임 */
+  @keyframes bulbs { 50% { box-shadow: 0 -4px 0 var(--btn), 0 4px 0 var(--btn), -4px 0 0 var(--btn), 4px 0 0 var(--btn); } }
+
+  /* ---------- 화면 ---------- */
+  .bezel { margin-top: 28px; background: var(--c-ink); padding: 12px; border-radius: 10px; }
+  .screen {
+    position: relative;
+    padding: 14px 16px 16px;
+    background: var(--screen);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .hud { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-family: var(--pixel); font-size: 12px; color: var(--dim); }
+  .hud b { font-weight: 400; color: var(--paper); font-variant-numeric: tabular-nums; }
+  .hud .score b { font-size: 24px; color: var(--ion-lime); }
+  .hud .best b { color: var(--ion-lime); }
+  .lives { display: inline-flex; align-items: center; gap: 6px; }
+  .lives i { display: block; }
+  .lives i.lost { opacity: .25; }
+  .mid { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  /* 공 속도 계기판: 목숨 아래. 받침대에 닿을 때마다 +5%, 화살표 한 칸 = +10% */
+  .gauge {
+    display: inline-flex; align-items: center; gap: 2px;
+    padding: 4px 10px;
+    background: var(--c-ink);
+    border-radius: 999px;
+    color: var(--ion-ice);
+  }
+  .gauge > span:first-child { margin-right: 4px; }
+  .gauge i { display: block; opacity: .25; }
+  .gauge i.on { opacity: 1; }
+  .gauge b { min-width: 3.6em; margin-left: 4px; text-align: right; color: var(--btn); }
+  .gauge.max i.on { animation: blink .3s steps(1, end) infinite; }
+  .gauge.max b { color: #ff9a3d; }
+  @keyframes blink { 50% { opacity: .45; } }
+
+  /* 게임 판: 480×360 캔버스를 도트 그대로 늘려 보여 준다 */
+  canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    margin-top: 12px;
+    image-rendering: pixelated;
+    border: 2px solid var(--room-2);
+  }
+
+  /* ---------- 시작·결과 안내판 ---------- */
+  .overlay {
+    position: absolute; inset: 0; z-index: 2;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 10px;
+    padding: 16px;
+    background: rgba(13, 16, 32, .84);
+    font-family: var(--pixel);
+  }
+  .overlay strong { font-weight: 400; font-size: 24px; line-height: 1.3; color: #fff; }
+  .overlay p { font-size: 12px; color: var(--dim); }
+  .overlay .over { font-size: 36px; color: var(--warn); }
+  .overlay .over.clear { color: var(--ion-lime); }
+  .overlay .endline.record { color: var(--ion-lime); }
+  /* 공이 받침대에 붙어 있을 때 받침대 위에 뜨는 발사 안내 */
+  .board-wrap { position: relative; }
+  .launch-hint {
+    position: absolute; left: 0; right: 0; bottom: 19%;
+    font-family: var(--pixel); font-size: 12px; color: var(--btn);
+    pointer-events: none;
+    animation: blink 1s steps(1, end) infinite;
+  }
+  /* 캔버스 위에 잠깐 뜨는 글자: 아이템 이름, 안내 (작은 화면에서도 또렷하게 HTML 글자) */
+  .bfloat {
+    position: absolute; z-index: 1;
+    translate: -50% -50%;
+    font-family: var(--pixel); font-weight: 700; font-size: 16px; line-height: 1; white-space: nowrap;
+    pointer-events: none;
+    --ol: #0d1020;
+    text-shadow: 2px 0 0 var(--ol), -2px 0 0 var(--ol), 0 2px 0 var(--ol), 0 -2px 0 var(--ol), 0 4px 0 var(--ol);
+    animation: bfloat .9s steps(9, end) forwards;
+  }
+  .bfloat.good { color: var(--ion-lime); }
+  .bfloat.bad { color: #ffb0b6; }
+  .bfloat.tip { color: var(--btn); font-size: 12px; }
+  @keyframes bfloat {
+    0%   { opacity: 0; transform: translateY(6px) scale(.8); }
+    20%  { opacity: 1; transform: translateY(0) scale(1.1); }
+    35%  { transform: scale(1); }
+    75%  { opacity: 1; }
+    100% { opacity: 0; transform: translateY(-18px); }
+  }
+  /* 최고 속도 벽돌을 깨면 게임기가 부르르 */
+  .cabinet.rumble { animation: rumble .28s steps(7, end); }
+  @keyframes rumble {
+    0% { translate: 4px 0; } 15% { translate: -5px 1px; } 30% { translate: 5px -1px; } 45% { translate: -4px 1px; }
+    60% { translate: 3px 0; } 80% { translate: -1px 0; } 100% { translate: 0 0; }
+  }
+  /* 게임기 아래 범례: 특수 벽돌과 아이템 */
+  .legend { margin-top: 16px; display: grid; gap: 8px; font-family: var(--pixel); font-size: 12px; color: var(--ion-ice); }
+  .legend .line { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 16px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend canvas { width: auto; height: auto; margin: 0; border: 0; image-rendering: pixelated; }
+  /* 공을 놓친 순간 화면 테두리가 잠깐 빨개진다 */
+  canvas.miss { border-color: var(--warn); }
+  .overlay .final { font-size: 48px; line-height: 1.1; color: var(--ion-lime); font-variant-numeric: tabular-nums; }
+  .overlay .final b { font-weight: 400; }
+  .overlay .final small { font-size: 16px; color: var(--paper); }
+  .overlay .egg { margin-bottom: 4px; }
+  /* 시작 안내판은 막을 옅게 + 흐림만 걸어서, 뒤의 벽돌 배치가 비쳐 보이게 한다 */
+  .overlay.see {
+    background: rgba(13, 16, 32, .55);
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+    justify-content: flex-end;   /* 내용은 아래쪽으로 모아서 위의 벽돌 배치가 덜 가리게 */
+    padding-bottom: 28px;
+  }
+  /* 비쳐 보이는 벽돌 위에서도 읽히게 글자에 짙은 외곽선 */
+  .overlay.see strong, .overlay.see p, .overlay.see .stepper label, .overlay.see .range {
+    text-shadow: 2px 0 0 var(--screen), -2px 0 0 var(--screen), 0 2px 0 var(--screen), 0 -2px 0 var(--screen);
+  }
+  .overlay.see p { color: var(--ion-ice); }
+
+  /* ---------- 벽돌 개수 고르기: [◀ 숫자 ▶] 두 칸 ---------- */
+  .setup { display: flex; justify-content: center; gap: 28px; margin-top: 4px; }
+  .stepper { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .stepper label { font-size: 12px; color: #fff; }
+  .stepper .row { display: flex; align-items: center; gap: 6px; }
+  .stepper input {
+    width: 2.6em; height: 40px;
+    border: 3px solid var(--ion-sky);
+    border-radius: 6px;
+    background: var(--screen);
+    color: var(--ion-lime);
+    font-family: var(--pixel); font-size: 24px; text-align: center;
+    font-variant-numeric: tabular-nums;
+    caret-color: var(--btn);
+  }
+  .stepper input.one { width: 1.9em; }
+  .stepper input:focus-visible { outline: 2px dashed var(--btn); outline-offset: 3px; }
+  .stepper input.bad { border-color: var(--warn); }
+  .step {
+    display: grid; place-items: center;
+    width: 32px; height: 32px;
+    border: 0; border-radius: 6px;
+    background: var(--ion-sky);
+    box-shadow: 0 4px 0 var(--ion-deep);
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .step:hover { background: var(--ion-fizz); }
+  .step:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ion-deep); }
+  .step:disabled { opacity: .35; cursor: default; transform: none; box-shadow: 0 4px 0 var(--ion-deep); }
+  .stepper .range { font-size: 12px; color: var(--dim); }
+
+  /* 노란 둥근 버튼 (오락실 공통 .push) */
+  .push {
+    margin-top: 8px;
+    padding: 12px 28px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--btn);
+    color: var(--c-ink);
+    font-family: var(--pixel);
+    font-size: 16px;
+    cursor: pointer;
+    box-shadow: inset 0 0 0 3px #ffdd6e, 0 6px 0 var(--btn-deep), 0 12px 12px -6px rgba(0,0,0,.4);
+    touch-action: manipulation;
+    transition: transform .06s, box-shadow .06s;
+  }
+  .push:hover { filter: brightness(1.04); }
+  /* 결과판이 뜰 때 자동으로 고르는 '다시 하기'는 점선 테두리를 그리지 않는다 (Enter로 바로 누를 수는 있음, 사용자 요청) */
+  #againBtn:focus-visible { outline: none; }
+  .push:active { transform: translateY(5px); box-shadow: inset 0 0 0 3px #ffdd6e, 0 1px 0 var(--btn-deep), 0 4px 6px -3px rgba(0,0,0,.4); }
+
+  .keys { margin-top: 18px; font-family: var(--pixel); font-size: 12px; color: var(--ion-ice); }
+
+  /* ---------- 화면 아래 좌우 버튼 (휴대폰·태블릿용, 방향키와 같은 역할) ----------
+     누르고 있는 동안 그 방향으로 움직인다. 키보드 ← → 를 누르면 같은 버튼도 눌린 모양이 된다 */
+  .pad { display: none; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 20px; }
+  @media (hover: none) and (pointer: coarse) { .pad { display: grid; } }
+  .pad button {
+    display: grid; place-items: center;
+    height: 72px;
+    border: 0; border-radius: 16px;
+    background: var(--btn);
+    box-shadow: inset 0 0 0 4px #ffdd6e, 0 8px 0 var(--btn-deep), 0 16px 14px -6px rgba(0,0,0,.3);
+    cursor: pointer;
+    touch-action: none;                 /* 누르고 있는 동안 화면이 스크롤·확대되지 않게 */
+    -webkit-user-select: none; user-select: none;
+    -webkit-touch-callout: none;        /* 길게 눌러도 메뉴가 뜨지 않게 */
+    -webkit-tap-highlight-color: transparent;
+  }
+  .pad button.held {
+    transform: translateY(6px);
+    box-shadow: inset 0 0 0 4px #ffdd6e, 0 2px 0 var(--btn-deep), 0 6px 6px -3px rgba(0,0,0,.3);
+  }
+
+  @media (max-width: 600px) {
+    .cabinet { padding: 18px 12px 22px; }
+    .marquee { font-size: 24px; padding: 10px 18px; }
+    .bezel { margin-top: 22px; padding: 8px; }
+    .screen { padding: 12px 10px 12px; }
+    .hud .score b { font-size: 16px; }
+    .gauge { padding: 3px 7px; gap: 1px; }
+    .gauge b { min-width: 3.2em; }
+    .overlay .final { font-size: 36px; }
+    .overlay .over { font-size: 24px; }
+    .overlay.see { gap: 4px; padding: 8px 8px 14px; }
+    .overlay.see .egg { margin-bottom: 0; }
+    .setup { gap: 16px; }
+    .stepper input { height: 34px; font-size: 16px; }
+    .step { width: 28px; height: 28px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <a class="back" href="arcade.html"><span data-back></span>게임 목록</a>
+</header>
+
+<main>
+  <p class="sub">받침대로 공을 튕겨서 벽돌을 모두 깨 보세요.</p>
+
+  <section class="cabinet" aria-label="벽돌 깨기 게임기">
+    <div class="fizz" aria-hidden="true">
+      <i style="left:18px;top:30px;width:12px;height:12px"></i>
+      <i style="left:38px;top:58px;width:8px;height:8px;animation-delay:-.6s"></i>
+      <i style="right:22px;top:40px;width:10px;height:10px;animation-delay:-1.2s"></i>
+      <i style="right:44px;top:22px;width:6px;height:6px;animation-delay:-1.8s"></i>
+    </div>
+
+    <h1 class="marquee">벽돌 깨기!</h1>
+
+    <div class="bezel">
+      <div class="screen">
+        <div class="hud">
+          <span class="score">점수 <b id="score">0</b></span>
+          <span class="mid">
+            <span class="lives" id="lives" aria-label="남은 목숨 5개">목숨 <i></i><i></i><i></i><i></i><i></i></span>
+            <span class="gauge" id="gauge" role="img" aria-label="공 속도 기본"><span>속도</span><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><b id="gaugeNum">+0%</b></span>
+          </span>
+          <span class="best">최고 <b id="best">0</b></span>
+        </div>
+        <div class="board-wrap">
+          <canvas id="board" width="480" height="360" aria-label="벽돌 깨기 게임 화면"></canvas>
+          <p class="launch-hint" id="launchHint" hidden>스페이스바를 눌러 발사!</p>
+        </div>
+
+        <!-- 시작 안내판 -->
+        <div class="overlay see" id="startPanel">
+          <span class="egg" data-egg></span>
+          <strong>벽돌을 깨라!</strong>
+          <p>스페이스바(또는 받침대 근처 터치)로 공을 쏘고, 받침대로 받아 튕겨요. 공을 떨어뜨리면 목숨이 하나 줄어요</p>
+          <div class="setup" role="group" aria-label="벽돌 개수 고르기">
+            <div class="stepper" data-key="rows">
+              <label for="rowsIn">줄</label>
+              <div class="row">
+                <button type="button" class="step" data-d="-1" aria-label="줄 줄이기"><span data-arrow="l"></span></button>
+                <input id="rowsIn" class="one" type="text" inputmode="numeric" maxlength="1" autocomplete="off" value="1">
+                <button type="button" class="step" data-d="1" aria-label="줄 늘리기"><span data-arrow="r"></span></button>
+              </div>
+              <span class="range">최소 1 · 최대 5</span>
+            </div>
+            <div class="stepper" data-key="cols">
+              <label for="colsIn">개수</label>
+              <div class="row">
+                <button type="button" class="step" data-d="-1" aria-label="개수 줄이기"><span data-arrow="l"></span></button>
+                <input id="colsIn" type="text" inputmode="numeric" maxlength="2" autocomplete="off" value="6">
+                <button type="button" class="step" data-d="1" aria-label="개수 늘리기"><span data-arrow="r"></span></button>
+              </div>
+              <span class="range">최소 6 · 최대 10</span>
+            </div>
+          </div>
+          <button type="button" class="push" id="startBtn">시작</button>
+        </div>
+
+        <!-- 결과 안내판: 게임이 끝나면 보여 준다 -->
+        <div class="overlay" id="endPanel" hidden>
+          <strong class="over" id="endTitle">Game Over!</strong>
+          <p>최종 점수</p>
+          <span class="final" aria-live="polite"><b id="finalScore">0</b><small>점</small></span>
+          <p class="endline" id="endLine"></p>
+          <button type="button" class="push" id="againBtn">다시 하기</button>
+        </div>
+      </div>
+    </div>
+    <div class="pad" aria-label="받침대 움직이기">
+      <button type="button" data-dir="left" aria-label="왼쪽으로 움직이기"><span data-pad="l"></span></button>
+      <button type="button" data-dir="right" aria-label="오른쪽으로 움직이기"><span data-pad="r"></span></button>
+    </div>
+    <div class="legend" aria-label="특수 벽돌과 아이템 안내">
+      <div class="line">
+        <span data-legend-brick="top">맨 윗줄: 2번</span>
+        <span data-legend-brick="tough">강철: 3번</span>
+        <span data-legend-brick="max">번개: 최고 속도로만</span>
+      </div>
+      <div class="line">
+        <span data-legend-item="up">속도+</span>
+        <span data-legend-item="down">속도−</span>
+        <span data-legend-item="split">공 3개</span>
+        <span data-legend-item="big">받침대+</span>
+        <span data-legend-item="small">받침대−</span>
+      </div>
+    </div>
+    <p class="keys" id="keysHint">← → 방향키로 받침대를 움직이고, 스페이스바로 공을 쏴요</p>
+  </section>
+</main>
+
+<script>
+  // ---------- 도트 그리기 (arcade.html·rps.html과 같은 방식) ----------
+  function pix(map, pal, px, outline) {
+    const h = map.length, w = map[0].length, o = outline ? 1 : 0;
+    const on = (x, y) => y >= 0 && y < h && x >= 0 && x < w && map[y][x] !== '.';
+    const rect = (x, y, f) => `<rect x="${x}" y="${y}" width="1" height="1" fill="${f}"/>`;
+    let r = '';
+    if (outline) {
+      for (let y = -1; y <= h; y++) for (let x = -1; x <= w; x++) {
+        if (!on(x, y) && (on(x - 1, y) || on(x + 1, y) || on(x, y - 1) || on(x, y + 1))) r += rect(x + o, y + o, outline);
+      }
+    }
+    map.forEach((row, y) => [...row].forEach((c, x) => { if (pal[c]) r += rect(x + o, y + o, pal[c]); }));
+    const W = w + 2 * o, H = h + 2 * o;
+    return `<svg viewBox="0 0 ${W} ${H}" width="${W * px}" height="${H * px}" shape-rendering="crispEdges" aria-hidden="true">${r}</svg>`;
+  }
+  const BACK_ARROW = ['...o', '..oo', '.ooo', 'oooo', '.ooo', '..oo', '...o'];
+  document.querySelector('[data-back]').innerHTML = pix(BACK_ARROW, { o: '#1d2236' }, 2);
+
+  // 달걀 (index.html과 같은 고정 디자인)
+  const EGG = [
+    '...wwww...',
+    '..wwwwww..',
+    '.wwwwwwws.',
+    '.wwwwwwws.',
+    'wwwwwwwwws',
+    'wwewwwwews',
+    'wbwwmmwwbs',
+    'wwwwwwwwss',
+    'wwwwwwwwss',
+    '.wwwwwwss.',
+    '..wwwsss..',
+    '...ssss...',
+  ];
+  const EGG_COLORS = { w: '#f3efe4', s: '#c9c0aa', e: '#151515', m: '#151515', b: '#e07a6f' };
+  document.querySelector('[data-egg]').innerHTML = pix(EGG, EGG_COLORS, 3, '#1d2236');
+
+  // 목숨 표시: 도트 하트 5개
+  const HEART = ['.rr.rr.', 'rrrrrrr', 'rrrrrrr', '.rrrrr.', '..rrr..', '...r...'];
+  document.querySelectorAll('#lives i').forEach(el => { el.innerHTML = pix(HEART, { r: '#ff5a6e' }, 2, '#1d2236'); });
+
+  // ---------- 최고 기록 (arcade.html과 같은 store 헬퍼) ----------
+  const store = {
+    get(k) { try { return Number(localStorage.getItem(k)) || 0; } catch (_) { return 0; } },
+    set(k, v) { try { localStorage.setItem(k, String(v)); } catch (_) {} },
+  };
+  const $ = (id) => document.getElementById(id);
+  $('best').textContent = store.get('brick-best');
+
+  // ---------- 판 그리기 ----------
+  const W = 480, H = 360;
+  let g = $('board').getContext('2d');   // 범례 아이콘을 그릴 때 잠깐 다른 캔버스로 바꿔 쓴다
+  // 줄 색: 맨 윗줄은 단단해 보이는 어두운 금속(2번 쳐야 깨지는 줄), 나머지는 이온 파랑 계열. 줄 수만큼 위에서부터 쓴다
+  const ROWS = ['#4f5b74', '#5cc8f5', '#9ee8ff', '#e8f6ff', '#ffffff'];
+  // 플레이어가 고른 벽돌 배치 (시작 전에 줄·개수 칸으로 바꾼다)
+  const LIMITS = { rows: [1, 5], cols: [6, 10] };
+  const layout = { rows: 1, cols: 6 };   // 처음 값은 최소치 (사용자 요청)
+  const BH = 16, GAP = 4, TOP = 40, FIELD = 440;   // 벽돌이 차지하는 가로 폭은 늘 같고, 개수가 적으면 벽돌이 넓어진다
+  let BW = (FIELD - (layout.cols - 1) * GAP) / layout.cols;
+  const TOUGH = '#aab8d4', MAXC = '#24306e';       // 3번 벽돌(은빛 강철), 최고 속도 벽돌(남색 + 노란 번개)
+  function drawBrick(x, y, color, w = BW) {
+    g.fillStyle = '#1d2236'; g.fillRect(x - 1, y - 1, w + 2, BH + 2);   // 외곽선
+    g.fillStyle = color; g.fillRect(x, y, w, BH);
+    g.fillStyle = 'rgba(255,255,255,.55)'; g.fillRect(x, y, w, 2);        // 윗면 빛
+    g.fillStyle = 'rgba(6,53,122,.35)'; g.fillRect(x, y + BH - 3, w, 3);  // 아랫면 그늘
+    if (color === ROWS[0]) {                                               // 어두운 금속: 가운데 가는 반사줄 + 비스듬한 빛 조각
+      g.fillStyle = 'rgba(200,214,236,.35)'; g.fillRect(x, y + 6, w, 1);
+      g.fillStyle = 'rgba(232,240,252,.6)'; g.fillRect(x + 4, y + 3, 3, 2); g.fillRect(x + 7, y + 5, 3, 1);
+    }
+  }
+  // 특수 벽돌 무늬: 강철은 네 귀퉁이 리벳, 최고 속도 벽돌은 노란 테두리 + 번개
+  function drawToughMarks(x, y, w) {
+    g.fillStyle = '#6c7fa6';
+    [[2, 4], [w - 4, 4], [2, BH - 6], [w - 4, BH - 6]].forEach(([dx, dy]) => g.fillRect(x + dx, y + dy, 2, 2));
+  }
+  function drawMaxMarks(x, y, w, hot) {
+    g.fillStyle = hot ? '#fff3a0' : '#ffcf3f';
+    g.fillRect(x, y, w, 1); g.fillRect(x, y + BH - 1, w, 1); g.fillRect(x, y, 1, BH); g.fillRect(x + w - 1, y, 1, BH);
+    const cx = Math.round(x + w / 2);   // 번개: 도트 지그재그
+    [[1, 3], [0, 5], [-1, 7], [0, 7], [1, 7], [0, 9], [-1, 11]].forEach(([dx, dy]) => g.fillRect(cx + dx * 2, y + dy, 3, 2));
+  }
+  // 금: 벽돌마다 미리 정해 둔 지그재그 선을 짙은 도트로 찍는다 (light = 금 살짝, heavy = 금 잔뜩)
+  function drawCracks(k) {
+    if (!k.crack) return;
+    g.fillStyle = k.type === 'top' ? 'rgba(214,224,242,.9)' : 'rgba(29,34,54,.85)';   // 어두운 금속 위에서는 밝은 금
+    const lines = k.crack === 'heavy' ? k.cracks : k.cracks.slice(0, 1);
+    lines.forEach(pts => pts.forEach(([px, py]) => g.fillRect(Math.round(k.x + px), Math.round(k.y + py), 2, 2)));
+  }
+  function makeCracks(w) {
+    const line = (x0, y0, dx, n) => { const p = []; let x = x0, y = y0; for (let i = 0; i < n; i++) { p.push([x, y]); x += dx; y += (Math.random() < .5 ? -2 : 2); y = Math.max(1, Math.min(BH - 3, y)); } return p; };
+    const mid = w / 2;
+    return [
+      line(mid - 2, 6, 2, Math.max(4, Math.round(w / 6))),            // 금 살짝: 가운데에서 오른쪽으로 한 줄
+      line(mid - 2, 6, -2, Math.max(4, Math.round(w / 6))),           // 금 잔뜩: 왼쪽 줄 + 아래위로 갈라진 두 줄
+      line(mid + w / 5, 2, 2, Math.max(3, Math.round(w / 9))),
+      line(mid - w / 5, BH - 4, -2, Math.max(3, Math.round(w / 9))),
+    ];
+  }
+  const PW0 = 72, PH = 10, PY = H - 28, BALL = 10;   // 받침대 기본 폭·두께·높이, 공 크기
+  let pw = PW0;                                      // 지금 받침대 폭 (아이템으로 ±30%)
+  function drawPaddle(x, w = pw) {
+    g.fillStyle = '#1d2236'; g.fillRect(x - 2, PY - 2, w + 4, PH + 4);
+    g.fillStyle = '#5cc8f5'; g.fillRect(x, PY, w, PH);
+    g.fillStyle = '#e8f6ff'; g.fillRect(x, PY, w, 3);
+  }
+  function drawBall(x, y) {   // 달걀 껍질 색 공 (x, y는 왼쪽 위)
+    x = Math.round(x); y = Math.round(y);
+    g.fillStyle = '#1d2236'; g.fillRect(x - 1, y - 1, BALL + 2, BALL + 2);
+    g.fillStyle = '#f3efe4'; g.fillRect(x, y, BALL, BALL);
+    g.fillStyle = '#c9c0aa'; g.fillRect(x + 6, y + 4, 4, 6);
+  }
+  function drawPreview() {
+    g.fillStyle = '#0d1020'; g.fillRect(0, 0, W, H);
+    BW = Math.floor((FIELD - (layout.cols - 1) * GAP) / layout.cols);
+    const left = Math.round((W - (layout.cols * BW + (layout.cols - 1) * GAP)) / 2);
+    for (let r = 0; r < layout.rows; r++) for (let i = 0; i < layout.cols; i++) drawBrick(left + i * (BW + GAP), TOP + r * (BH + GAP), ROWS[r]);
+    const px = (W - PW0) / 2;
+    drawPaddle(px, PW0);
+    drawBall(px + PW0 / 2 - BALL / 2, PY - BALL);   // 시작할 땐 공이 받침대 위에 붙어 있다
+  }
+  drawPreview();
+
+  // ---------- 벽돌 개수 고르기 ----------
+  const ARROW_R = ['o...', 'oo..', 'ooo.', 'oooo', 'ooo.', 'oo..', 'o...'];
+  const ARROW_L = ARROW_R.map(r => [...r].reverse().join(''));
+  document.querySelectorAll('[data-arrow]').forEach(el => {
+    el.innerHTML = pix(el.dataset.arrow === 'l' ? ARROW_L : ARROW_R, { o: '#06357a' }, 3);
+  });
+  document.querySelectorAll('.stepper').forEach(box => {
+    const key = box.dataset.key, [min, max] = LIMITS[key];
+    const input = box.querySelector('input'), [down, up] = box.querySelectorAll('.step');
+    // 값을 바꾸면 화살표 잠금 상태를 맞추고, 뒤의 벽돌을 바로 다시 그린다
+    const set = (v) => {
+      layout[key] = Math.min(max, Math.max(min, v));
+      input.value = layout[key];
+      input.classList.remove('bad');
+      down.disabled = layout[key] <= min;
+      up.disabled = layout[key] >= max;
+      drawPreview();
+    };
+    box.querySelectorAll('.step').forEach(b => b.addEventListener('click', () => set(layout[key] + Number(b.dataset.d))));
+    // 직접 입력: 숫자만 남기고, 범위 안이면 바로 반영. 범위 밖은 빨간 테두리 → 칸을 벗어나면 가까운 값으로 맞춘다
+    input.addEventListener('input', () => {
+      input.value = input.value.replace(/[^0-9]/g, '');
+      const v = Number(input.value);
+      if (input.value !== '' && v >= min && v <= max) set(v);
+      else input.classList.add('bad');
+    });
+    input.addEventListener('change', () => set(input.value === '' ? layout[key] : Number(input.value)));
+    input.addEventListener('blur', () => set(input.value === '' ? layout[key] : Number(input.value)));
+    // 칸 안에서 위·아래 방향키로도 1씩 조절
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowUp') { e.preventDefault(); set(layout[key] + 1); }
+      if (e.key === 'ArrowDown') { e.preventDefault(); set(layout[key] - 1); }
+    });
+    set(layout[key]);
+  });
+
+  // ---------- 받침대 입력: 키보드 ← → 와 화면 아래 버튼이 같은 상태를 바꾼다 ----------
+  // 게임 루프는 매 프레임 move.left / move.right 만 보면 된다 (마우스·터치로 끌기는 없음)
+  const move = { left: false, right: false };
+  const padBtns = { left: document.querySelector('.pad [data-dir="left"]'), right: document.querySelector('.pad [data-dir="right"]') };
+  // 위 숫자 칸 화살표와 같은 모양을 크게
+  document.querySelector('[data-pad="l"]').innerHTML = pix(ARROW_L, { o: '#06357a' }, 6);
+  document.querySelector('[data-pad="r"]').innerHTML = pix(ARROW_R, { o: '#06357a' }, 6);
+  function hold(dir, on) {
+    move[dir] = on;
+    padBtns[dir].classList.toggle('held', on);
+  }
+  const KEY_DIR = { ArrowLeft: 'left', ArrowRight: 'right' };
+  document.addEventListener('keydown', (e) => {
+    const dir = KEY_DIR[e.key];
+    if (!dir || (e.target instanceof Element && e.target.matches('input'))) return;   // 숫자 칸 안에서는 글자 커서 이동 그대로
+    e.preventDefault();
+    hold(dir, true);
+  });
+  document.addEventListener('keyup', (e) => { const dir = KEY_DIR[e.key]; if (dir) hold(dir, false); });
+  Object.entries(padBtns).forEach(([dir, btn]) => {
+    btn.addEventListener('pointerdown', (e) => { e.preventDefault(); btn.setPointerCapture?.(e.pointerId); hold(dir, true); });
+    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t => btn.addEventListener(t, () => hold(dir, false)));
+    btn.addEventListener('contextmenu', (e) => e.preventDefault());
+  });
+  // 창을 벗어나면(다른 앱으로 전환 등) 눌림을 모두 푼다
+  window.addEventListener('blur', () => { hold('left', false); hold('right', false); });
+  // 터치 기기에서는 안내 문구도 버튼 쪽으로
+  const TOUCH = matchMedia('(hover: none) and (pointer: coarse)').matches;
+  if (TOUCH) {
+    $('keysHint').textContent = '아래 ◀ ▶ 버튼으로 받침대를 움직이고, 받침대 근처를 터치해 공을 쏴요';
+    $('launchHint').textContent = '받침대 근처를 터치해서 발사!';
+  }
+
+  // ==================== 게임 ====================
+  // phase: menu(시작 전) → ready(공이 받침대에 붙어 대기) → fly(공이 날아다님) → over(끝)
+  const SPEED = 363;                 // 받침대 속도 (px/초). 300 → 330 → 363 (사용자 요청으로 두 번 10%씩 올림)
+  const BALL_V0 = 250;               // 공 처음 속도 (px/초)
+  const BOOST_STEP = 0.05, BOOST_MAX = 1;   // 받침대에 닿을 때마다 처음 속도의 +5%, 최대 +100%(2배)
+  const ITEM_BOOST = 0.2;            // 속도 +/- 아이템 한 번에 ±20%
+  const LIVES = 5, MAX_BALLS = 12;   // 목숨 3 → 5 (사용자 요청)
+  const TOUGH_RATE = 0.1, MAX_RATE = 0.1, DROP_RATE = 0.5;   // 3번 벽돌 10%, 최고 속도 벽돌 10% (맨 윗줄 제외), 특수 벽돌이 깨지면 아이템 50%
+  const HITSTOP = { top: 0.05, tough: 0.05, max: 0.1 };  // 깨질 때 화면 멈춤 (초). 0.1·0.1·0.2에서 사용자 요청으로 모두 절반
+  const WARP = 26;                   // 워프 입구·출구 길이 (얇은 띠)
+  const ITEMS = {
+    up:    { name: '속도 UP!',      color: '#ffcf3f' },
+    down:  { name: '속도 DOWN',     color: '#9aa6cc' },
+    split: { name: '공 3개!',       color: '#c6f04a' },
+    big:   { name: '받침대 커짐!',   color: '#5cc8f5' },
+    small: { name: '받침대 작아짐',  color: '#ff9ec7' },
+  };
+  let boost = 0;                     // 지금까지 붙은 속도 (0 ~ 1)
+  let phase = 'menu', score = 0, lives = LIVES, best = store.get('brick-best');
+  let bricks = [], balls = [], drops = [], bits = [], fx = [];
+  let paddle = (W - PW0) / 2, paddleHits = 0, freeze = 0, clock = 0;
+  const warp = { L: 0, R: 0, top: 0 };
+  let last = 0, raf = 0;
+  const curSpeed = () => BALL_V0 * (1 + boost);
+
+  function buildBricks() {
+    BW = Math.floor((FIELD - (layout.cols - 1) * GAP) / layout.cols);
+    const left = Math.round((W - (layout.cols * BW + (layout.cols - 1) * GAP)) / 2);
+    bricks = [];
+    for (let r = 0; r < layout.rows; r++) for (let i = 0; i < layout.cols; i++) {
+      const base = (layout.rows - r) * 10;   // 위 줄일수록 점수가 크다
+      // 맨 윗줄은 전부 2번 벽돌. 나머지 줄은 10%씩 3번 벽돌·최고 속도 벽돌로 바뀐다
+      let type = 'normal';
+      if (r === 0) type = 'top';
+      else { const p = Math.random(); if (p < TOUGH_RATE) type = 'tough'; else if (p < TOUGH_RATE + MAX_RATE) type = 'max'; }
+      const k = { x: left + i * (BW + GAP), y: TOP + r * (BH + GAP), type, hp: 1, crack: null, flash: 0, color: ROWS[r], pts: base };
+      if (type === 'top') { k.hp = 2; }
+      if (type === 'tough') { k.hp = 3; k.color = TOUGH; k.pts = base * 2; }
+      if (type === 'max') { k.color = MAXC; k.pts = base * 3; }
+      if (type === 'top' || type === 'tough') k.cracks = makeCracks(BW);
+      bricks.push(k);
+    }
+  }
+  function drawLives() {
+    $('lives').querySelectorAll('i').forEach((el, i) => el.classList.toggle('lost', i >= lives));
+    $('lives').setAttribute('aria-label', `남은 목숨 ${lives}개`);
+  }
+  // 받침대 위에 붙은 공 하나로 되돌린다 (시작·목숨을 잃었을 때)
+  function resetBall() {
+    balls = [{ x: 0, y: 0, vx: 0, vy: 0, stuck: true, warpCd: 0, pierce: 0, trail: [] }];
+    stickBalls();
+  }
+  function stickBalls() { balls.forEach(b => { if (b.stuck) { b.x = paddle + pw / 2 - BALL / 2; b.y = PY - BALL; } }); }
+  // 속도가 바뀌면 날아가는 공 모두의 방향은 두고 빠르기만 맞춘다
+  function applySpeed() {
+    const v = curSpeed();
+    balls.forEach(b => { if (b.stuck) return; const s = Math.hypot(b.vx, b.vy) || 1; b.vx = b.vx / s * v; b.vy = b.vy / s * v; });
+    drawGauge();
+  }
+  function setPaddleWidth(w) {
+    const c = paddle + pw / 2;
+    pw = w;
+    paddle = Math.max(0, Math.min(W - pw, c - pw / 2));
+  }
+  // 워프: 입구는 좌우 벽에 하나씩(파랑), 출구는 윗벽에 하나(빨강). 받침대에 2번 닿을 때마다 자리를 바꾼다
+  function placeWarps(flash) {
+    const ry = () => Math.round(70 + Math.random() * (PY - 150));
+    warp.L = ry(); warp.R = ry();
+    warp.top = Math.round(30 + Math.random() * (W - 60 - WARP));
+    if (flash) fx.push({ kind: 'warpmove', t: .35, max: .35 });
+  }
+
+  function startGame() {
+    buildBricks();
+    score = 0; lives = LIVES; boost = 0; paddleHits = 0; freeze = 0;
+    drops = []; bits = []; fx = [];
+    pw = PW0; paddle = (W - pw) / 2;
+    placeWarps(false);
+    drawGauge();
+    $('score').textContent = 0;
+    drawLives();
+    clearFloats();
+    $('startPanel').hidden = true;
+    $('endPanel').hidden = true;
+    phase = 'ready';
+    resetBall();
+    cancelAnimationFrame(raf);
+    last = performance.now();
+    raf = requestAnimationFrame(loop);
+  }
+  $('startBtn').addEventListener('click', startGame);
+  $('againBtn').addEventListener('click', startGame);
+
+  // ---------- 발사: 스페이스바, 또는 받침대 근처 클릭·터치 ----------
+  function launch() {
+    if (phase !== 'ready') return;
+    const a = (-90 + (Math.random() * 30 - 15)) * Math.PI / 180;   // 위쪽으로, 좌우 15도 안에서 무작위
+    balls.forEach(b => { if (!b.stuck) return; b.stuck = false; b.vx = Math.cos(a) * curSpeed(); b.vy = Math.sin(a) * curSpeed(); });
+    phase = 'fly';
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.code !== 'Space' || phase === 'menu' || phase === 'over' || phase === 'ending') return;
+    if (e.target instanceof Element && e.target.matches('input, button')) return;   // 버튼·칸 위에서는 원래 동작
+    e.preventDefault();                             // 게임 중엔 화면이 스크롤되지 않게
+    launch();
+  });
+  // 캔버스 좌표로 바꿔서 받침대 둘레(가로 ±40px, 위로 70px·아래로 30px) 안을 누르면 발사
+  $('board').addEventListener('pointerdown', (e) => {
+    const r = $('board').getBoundingClientRect();
+    const x = (e.clientX - r.left) * W / r.width, y = (e.clientY - r.top) * H / r.height;
+    if (x >= paddle - 40 && x <= paddle + pw + 40 && y >= PY - 70 && y <= PY + 30) launch();
+  });
+
+  // ---------- 매 프레임 ----------
+  function loop(now) {
+    const dt = Math.min((now - last) / 1000, 1 / 30);   // 탭을 다녀와도 한 번에 크게 움직이지 않게
+    last = now;
+    if (phase === 'ending') {          // 끝난 뒤 1초(실제 시간) 동안 1/8 속도로 계속 움직이다가 멈춘다
+      endT -= dt;
+      update(dt * SLOWMO);
+      if (endT <= 0) { showResult(); draw(); return; }
+    } else update(dt);
+    draw();
+    if (phase !== 'over') raf = requestAnimationFrame(loop);
+  }
+
+  function update(dt) {
+    clock += dt;
+    if (freeze > 0) { freeze -= dt; return; }        // 최고 속도 벽돌을 깼을 때 0.1초 멈춤
+    // 받침대: 방향키·화면 버튼 상태만 본다
+    const dir = (move.right ? 1 : 0) - (move.left ? 1 : 0);
+    // 공이 빨라진 비율의 절반만큼 받침대도 빨라진다 (공 +100%면 받침대 +50%)
+    paddle = Math.max(0, Math.min(W - pw, paddle + dir * SPEED * (1 + boost / 2) * dt));
+    if (phase === 'ready') stickBalls();
+    else if (phase === 'fly' || phase === 'ending') {
+      // 빠른 공이 벽돌을 뚫고 지나가지 않게 4px씩 잘게 나눠 움직인다
+      const steps = Math.ceil(curSpeed() * dt / 4);
+      const going = phase;
+      for (let i = 0; i < steps && phase === going && freeze <= 0; i++) balls.slice().forEach(b => step(b, dt / steps));
+      updateDrops(dt);
+    }
+    const tailN = tailLength();
+    balls.forEach(b => {
+      // 혜성 꼬리: 공이 지나온 자리를 기억해 둔다 (속도 +50%부터, 빠를수록 길게)
+      if (!b.tail) b.tail = [];
+      if (!b.stuck && tailN > 0) { b.tail.push([b.x, b.y]); while (b.tail.length > tailN) b.tail.shift(); }
+      else b.tail.length = 0;
+      b.warpCd = Math.max(0, b.warpCd - dt);
+      b.pierce = Math.max(0, b.pierce - dt);
+      if (b.pierce > 0) { b.trail.push([b.x, b.y]); if (b.trail.length > 6) b.trail.shift(); } else b.trail.length = 0;
+    });
+    bricks.forEach(k => { k.flash = Math.max(0, k.flash - dt); });
+    bits = bits.filter(p => (p.t -= dt) > 0);
+    bits.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += (p.g ?? 500) * dt; });
+    fx = fx.filter(f => (f.t -= dt) > 0);
+  }
+
+  function step(b, dt) {
+    if (b.stuck || !balls.includes(b)) return;
+    b.x += b.vx * dt;
+    b.y += b.vy * dt;
+    const cy = b.y + BALL / 2, cx = b.x + BALL / 2;
+    // 좌우 벽: 워프 입구에 닿으면 윗벽 출구로 순간이동, 아니면 반사
+    if (b.x < 0) {
+      if (b.warpCd <= 0 && cy >= warp.L && cy <= warp.L + WARP) return doWarp(b, 0, warp.L);
+      b.x = 0; b.vx = Math.abs(b.vx);
+    }
+    if (b.x > W - BALL) {
+      if (b.warpCd <= 0 && cy >= warp.R && cy <= warp.R + WARP) return doWarp(b, W, warp.R);
+      b.x = W - BALL; b.vx = -Math.abs(b.vx);
+    }
+    if (b.y < 0) { b.y = 0; b.vy = Math.abs(b.vy); }
+    // 받침대: 맞은 자리에 따라 튕기는 각도가 달라진다 (가운데는 위로, 끝일수록 비스듬히 최대 60도)
+    if (b.vy > 0 && b.y + BALL >= PY && b.y + BALL <= PY + PH + 6 && b.x + BALL >= paddle && b.x <= paddle + pw) {
+      const off = Math.max(-1, Math.min(1, (cx - (paddle + pw / 2)) / (pw / 2)));
+      const a = (-90 + off * 60) * Math.PI / 180;
+      boost = Math.min(BOOST_MAX, boost + BOOST_STEP);   // 받침대에 닿을 때마다 빨라진다
+      b.vx = Math.cos(a) * curSpeed();
+      b.vy = Math.sin(a) * curSpeed();
+      b.y = PY - BALL;
+      applySpeed();
+      if (++paddleHits % 2 === 0) placeWarps(true);       // 2번 닿을 때마다 워프 자리 바꾸기
+    }
+    // 벽돌
+    for (let i = 0; i < bricks.length; i++) {
+      const k = bricks[i];
+      if (b.x + BALL <= k.x || b.x >= k.x + BW || b.y + BALL <= k.y || b.y >= k.y + BH) continue;
+      hitBrick(b, k, i);
+      break;
+    }
+    // 바닥으로 떨어짐: 공이 하나도 안 남았을 때만 목숨 -1
+    if (b.y > H) {
+      balls.splice(balls.indexOf(b), 1);
+      if (!balls.length && phase === 'fly') loseLife();   // 끝난 뒤 슬로모션 중에는 떨어져도 그냥 사라진다
+    }
+  }
+
+  function doWarp(b, wallX, wy) {
+    if (b.tail) b.tail.length = 0;     // 순간이동하면 꼬리가 화면을 가로지르지 않게 끊는다
+    fx.push({ kind: 'warpin', x: wallX, y: wy, t: .3, max: .3 });
+    b.x = warp.top + WARP / 2 - BALL / 2;
+    b.y = 4;
+    const a = (Math.random() * 60 - 30) * Math.PI / 180;   // 출구에서 아래쪽으로, 좌우 30도 안에서
+    b.vx = Math.sin(a) * curSpeed();
+    b.vy = Math.cos(a) * curSpeed();
+    b.warpCd = .3;
+    fx.push({ kind: 'warpout', x: warp.top, t: .3, max: .3 });
+  }
+
+  function bounceOff(b, k) {           // 겹친 쪽이 적은 방향으로 튕긴다
+    const ox = Math.min(b.x + BALL - k.x, k.x + BW - b.x);
+    const oy = Math.min(b.y + BALL - k.y, k.y + BH - b.y);
+    if (ox < oy) { b.vx = -b.vx; b.x += b.vx > 0 ? ox : -ox; }
+    else { b.vy = -b.vy; b.y += b.vy > 0 ? oy : -oy; }
+  }
+
+  function hitBrick(b, k, i) {
+    // 최고 속도 벽돌: 공이 최고 속도(+100%)일 때만 깨진다. 아니면 튕기고 번쩍
+    if (k.type === 'max' && boost < BOOST_MAX) {
+      bounceOff(b, k);
+      k.flash = .2;
+      if (clock - (k.warned || -9) > 1) { k.warned = clock; boardFloat('최고 속도로 쳐야 깨져요!', k.x + BW / 2, k.y + BH + 14, 'tip'); }
+      return;
+    }
+    k.hp--;
+    if (k.hp > 0) {                    // 아직 안 깨짐: 금이 간다 (2번 벽돌은 한 번에 '금 잔뜩')
+      bounceOff(b, k);
+      k.crack = k.type === 'top' ? 'heavy' : (k.hp === 2 ? 'light' : 'heavy');
+      k.flash = .12;
+      for (let j = 0; j < 3; j++) bits.push({ x: k.x + BW / 2, y: k.y + BH / 2, vx: (Math.random() - .5) * 120, vy: -Math.random() * 80, t: .3, color: '#1d2236' });
+      return;
+    }
+    // 깨짐
+    bricks.splice(i, 1);
+    score += k.pts;
+    $('score').textContent = score;
+    const special = k.type !== 'normal';
+    if (special) { const dir = [b.vx, b.vy]; bounceOff(b, k); breakThrough(b, k, dir); } else {   // 특수 벽돌도 이제 튕겨 나온다 (사용자 요청)
+      bounceOff(b, k);
+      for (let j = 0; j < 6; j++) bits.push({ x: k.x + BW / 2, y: k.y + BH / 2, vx: (Math.random() - .5) * 220, vy: -Math.random() * 160, t: .45, color: k.color });
+    }
+    // 타격감: 특수 벽돌이 깨지면 화면을 잠깐 멈춘다 (2번·강철 0.05초 · 번개 0.1초, 사용자 요청)
+    if (HITSTOP[k.type]) freeze = HITSTOP[k.type];
+    if (k.type === 'max') {            // 번개 벽돌은 게임기도 부르르
+      const cab = document.querySelector('.cabinet');
+      cab.classList.remove('rumble'); void cab.offsetWidth; cab.classList.add('rumble');
+    }
+    if (special && Math.random() < DROP_RATE) {
+      const types = Object.keys(ITEMS);
+      drops.push({ x: k.x + BW / 2 - 12, y: k.y, type: types[Math.floor(Math.random() * types.length)] });
+    }
+    if (!bricks.length) finish(true);
+  }
+
+  // 깨짐 이펙트: 공은 기본 벽돌처럼 튕겨 나오고, 조각은 공이 들어오던 방향(dir)으로 쏟아지며 테두리 충격파 + 잔상
+  // (처음엔 공이 뚫고 지나가는 '돌파'였는데 사용자 요청으로 튕기게 바꾸고 이펙트만 남김)
+  function breakThrough(b, k, dir) {
+    const s = Math.hypot(dir[0], dir[1]) || 1, ux = dir[0] / s, uy = dir[1] / s;
+    for (let j = 0; j < 12; j++) {
+      const spread = (Math.random() - .5) * 0.9, sp = 180 + Math.random() * 220;
+      const vx = (ux * Math.cos(spread) - uy * Math.sin(spread)) * sp, vy = (ux * Math.sin(spread) + uy * Math.cos(spread)) * sp;
+      bits.push({ x: k.x + BW / 2, y: k.y + BH / 2, vx, vy, t: .45, color: j % 3 ? k.color : '#ffffff', g: 200 });
+    }
+    fx.push({ kind: 'shock', x: k.x, y: k.y, w: BW, t: .18, max: .18 });
+    b.pierce = .25;
+  }
+
+  // ---------- 아이템 ----------
+  function updateDrops(dt) {
+    drops = drops.filter(d => {
+      d.y += 110 * dt;
+      if (phase === 'fly' && d.y + 12 >= PY && d.y <= PY + PH && d.x + 24 >= paddle && d.x <= paddle + pw) { applyItem(d.type); return false; }
+      return d.y < H;
+    });
+  }
+  function applyItem(type) {
+    if (type === 'up') { boost = Math.min(BOOST_MAX, boost + ITEM_BOOST); applySpeed(); }
+    if (type === 'down') { boost = Math.max(0, boost - ITEM_BOOST); applySpeed(); }   // 처음 속도 아래로는 안 내려감
+    if (type === 'big') setPaddleWidth(Math.round(PW0 * 1.3));
+    if (type === 'small') setPaddleWidth(Math.round(PW0 * 0.7));
+    if (type === 'split') {            // 날고 있는 공 하나를 좌우 25도로 갈라 3개로
+      const src = balls.find(b => !b.stuck);
+      if (src) [-25, 25].forEach(deg => {
+        if (balls.length >= MAX_BALLS) return;
+        const r = deg * Math.PI / 180;
+        balls.push({ x: src.x, y: src.y, vx: src.vx * Math.cos(r) - src.vy * Math.sin(r), vy: src.vx * Math.sin(r) + src.vy * Math.cos(r), stuck: false, warpCd: src.warpCd, pierce: 0, trail: [] });
+      });
+    }
+    boardFloat(ITEMS[type].name, paddle + pw / 2, PY - 18, type === 'down' || type === 'small' ? 'bad' : 'good');
+  }
+
+  // ---------- 캔버스 위에 띄우는 글자 (작은 화면에서도 또렷하게 HTML로) ----------
+  function boardFloat(text, x, y, cls) {
+    const el = document.createElement('span');
+    el.className = `bfloat ${cls}`;
+    el.textContent = text;
+    el.style.left = `${x / W * 100}%`;
+    el.style.top = `${y / H * 100}%`;
+    el.setAttribute('aria-hidden', 'true');
+    document.querySelector('.board-wrap').appendChild(el);
+    setTimeout(() => el.remove(), 900);
+  }
+  function clearFloats() { document.querySelectorAll('.bfloat').forEach(el => el.remove()); }
+
+  // ---------- 속도 계기판 ----------
+  const gaugeArrows = [...$('gauge').querySelectorAll('i')];
+  gaugeArrows.forEach((el, i) => { el.innerHTML = pix(ARROW_R, { o: i < 7 ? '#ffcf3f' : '#ff9a3d' }, 2); });   // 끝 3칸은 주황
+  function drawGauge() {
+    const pct = Math.round(boost * 100);
+    gaugeArrows.forEach((el, i) => el.classList.toggle('on', i < Math.round(boost * 10)));   // 한 칸 = +10%
+    $('gaugeNum').textContent = `+${pct}%`;
+    $('gauge').classList.toggle('max', boost >= BOOST_MAX);
+    $('gauge').setAttribute('aria-label', pct ? `공 속도 기본보다 ${pct}% 빠름` : '공 속도 기본');
+  }
+  drawGauge();
+
+  function loseLife() {
+    lives--;
+    drawLives();
+    $('board').classList.add('miss');
+    setTimeout(() => $('board').classList.remove('miss'), 300);
+    drops = [];                        // 떨어지던 아이템과 받침대 크기는 원래대로
+    setPaddleWidth(PW0);
+    if (lives <= 0) return finish(false);
+    phase = 'ready';                   // 다시 받침대 위에 붙여서 대기 (쌓인 속도는 유지)
+    resetBall();
+  }
+
+  const SLOWMO = 0.125, END_SLOW = 1;  // 끝나면 1초 동안 1/8 속도 (1/4에서 사용자 요청으로 2배 더 느리게)
+  let endT = 0, endCleared = false;
+  function finish(cleared) {
+    if (phase === 'ending' || phase === 'over') return;
+    endCleared = cleared;
+    endT = END_SLOW;
+    phase = 'ending';
+  }
+  function showResult() {
+    const cleared = endCleared;
+    phase = 'over';
+    boost = 0;                         // 판이 끝나면 공 속도·받침대 속도·계기판·가속 효과를 기본값으로 (사용자 요청)
+    drawGauge();
+    balls.forEach(b => { if (b.tail) b.tail.length = 0; });
+    const record = score > best;
+    if (record) { best = score; store.set('brick-best', best); $('best').textContent = best; }
+    $('endTitle').textContent = cleared ? 'Clear!' : 'Game Over!';
+    $('endTitle').classList.toggle('clear', cleared);
+    $('finalScore').textContent = score;
+    $('endLine').className = `endline${record ? ' record' : ''}`;
+    $('endLine').textContent = record ? '신기록이에요!' : `최고 기록 ${best}점`;
+    $('endPanel').hidden = false;
+    $('againBtn').focus();
+  }
+
+  // ---------- 그리기 ----------
+  function drawGameBrick(k) {
+    drawBrick(k.x, k.y, k.color);
+    if (k.type === 'tough') drawToughMarks(k.x, k.y, BW);
+    if (k.type === 'max') drawMaxMarks(k.x, k.y, BW, boost >= BOOST_MAX && Math.floor(clock * 6) % 2 === 0);   // 최고 속도면 번쩍이며 '지금 깰 수 있어요'
+    drawCracks(k);
+    if (k.flash > 0) { g.fillStyle = `rgba(255,255,255,${k.flash * 3})`; g.fillRect(k.x, k.y, BW, BH); }
+  }
+  // 워프: 얇은 띠 + 안쪽으로 흐르는 밝은 점 (입구 파랑, 출구 빨강)
+  function drawWarps() {
+    const run = (clock * 40) % WARP;
+    // 왼쪽 입구
+    g.fillStyle = '#1d6cff'; g.fillRect(0, warp.L, 4, WARP);
+    g.fillStyle = '#9ee8ff'; g.fillRect(0, warp.L + run, 4, 3); g.fillRect(4, warp.L, 2, 2); g.fillRect(4, warp.L + WARP - 2, 2, 2);
+    // 오른쪽 입구
+    g.fillStyle = '#1d6cff'; g.fillRect(W - 4, warp.R, 4, WARP);
+    g.fillStyle = '#9ee8ff'; g.fillRect(W - 4, warp.R + WARP - 3 - run, 4, 3); g.fillRect(W - 6, warp.R, 2, 2); g.fillRect(W - 6, warp.R + WARP - 2, 2, 2);
+    // 윗벽 출구
+    g.fillStyle = '#ff3b4e'; g.fillRect(warp.top, 0, WARP, 4);
+    g.fillStyle = '#ffb0b6'; g.fillRect(warp.top + run, 0, 3, 4); g.fillRect(warp.top, 4, 2, 2); g.fillRect(warp.top + WARP - 2, 4, 2, 2);
+  }
+  // 아이템 캡슐(24×12) + 종류별 도트 아이콘
+  function drawItem(type, x, y) {
+    x = Math.round(x); y = Math.round(y);
+    g.fillStyle = '#1d2236'; g.fillRect(x + 1, y - 1, 22, 14); g.fillRect(x - 1, y + 1, 26, 10);
+    g.fillStyle = ITEMS[type].color; g.fillRect(x + 1, y, 22, 12); g.fillRect(x, y + 1, 24, 10);
+    g.fillStyle = 'rgba(255,255,255,.6)'; g.fillRect(x + 3, y + 1, 18, 2);
+    g.fillStyle = '#1d2236';
+    const chev = (cx, dirx) => { for (let j = 0; j < 3; j++) { g.fillRect(cx + dirx * j, y + 3 + j, 2, 2); g.fillRect(cx + dirx * j, y + 7 - j, 2, 2); } };
+    if (type === 'up') { chev(x + 7, 1); chev(x + 13, 1); }
+    if (type === 'down') { chev(x + 11, -1); chev(x + 17, -1); }
+    if (type === 'split') [5, 11, 17].forEach(dx => g.fillRect(x + dx, y + 5, 3, 3));
+    if (type === 'big') { g.fillRect(x + 6, y + 5, 12, 2); g.fillRect(x + 4, y + 3, 2, 6); g.fillRect(x + 18, y + 3, 2, 6); }
+    if (type === 'small') { g.fillRect(x + 9, y + 5, 6, 2); g.fillRect(x + 5, y + 4, 2, 4); g.fillRect(x + 7, y + 5, 2, 2); g.fillRect(x + 17, y + 4, 2, 4); g.fillRect(x + 15, y + 5, 2, 2); }
+  }
+  // ---------- 가속 효과: 공이 빨라질수록 레이싱 게임처럼 가운데에서 바깥으로 흰 집중선이 달린다 ----------
+  // 배경 층에만 그려서(벽돌·공·워프보다 먼저) 게임 요소는 계속 또렷하다. 공 속도 +25%부터 나타나 +100%에서 가장 진하다
+  const RUSH_N = 40, RUSH_FROM = 0.25;
+  const rushLines = Array.from({ length: RUSH_N }, (_, i) => ({ a: (i / RUSH_N) * Math.PI * 2 + Math.random() * 0.1, off: Math.random(), len: 18 + Math.random() * 30, w: Math.random() < .3 ? 2 : 1 }));
+  const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // ---------- 혜성 꼬리 (크레이지 아케이드의 '샤샤샥'처럼) ----------
+  // 공 속도 +50%에서 짧게 나타나 +100%까지 조금씩 길어진다 (기억하는 자리 6개 -> 18개, 1/60초마다 하나)
+  const TAIL_FROM = 0.5, TAIL_MIN = 6, TAIL_MAX = 18;
+  function tailLength() {
+    if (boost < TAIL_FROM) return 0;
+    return Math.round(TAIL_MIN + (TAIL_MAX - TAIL_MIN) * (boost - TAIL_FROM) / (1 - TAIL_FROM));
+  }
+  function drawTail(b) {
+    const n = b.tail ? b.tail.length : 0;
+    b.tail && b.tail.forEach(([tx, ty], j) => {
+      const f = (j + 1) / (n + 1);                    // 0에 가까울수록 오래된(먼) 자리
+      const size = Math.max(2, Math.round(BALL * (0.3 + 0.7 * f)));
+      const off = (BALL - size) / 2;
+      g.globalAlpha = 0.25 + 0.7 * f;
+      g.fillStyle = f < 0.45 ? '#2f8cff' : f < 0.75 ? '#5cc8f5' : f < 0.9 ? '#9ee8ff' : '#fff3e0';   // 꼬리 끝은 파랑 → 하늘 → 공 쪽은 밝은 크림
+      g.fillRect(Math.round(tx + off), Math.round(ty + off), size, size);
+    });
+    g.globalAlpha = 1;
+  }
+
+  function drawRush() {
+    const t = Math.min(1, Math.max(0, (boost - RUSH_FROM) / (1 - RUSH_FROM)));
+    if (t <= 0) return;
+    const cx = W / 2, cy = H / 2, reach = Math.hypot(cx, cy);
+    // 가장자리로 갈수록 이온 하늘색 기운
+    const glow = g.createRadialGradient(cx, cy, reach * 0.35, cx, cy, reach);
+    glow.addColorStop(0, 'rgba(92,200,245,0)');
+    glow.addColorStop(1, `rgba(92,200,245,${0.22 * t})`);
+    g.fillStyle = glow; g.fillRect(0, 0, W, H);
+    // 집중선: 공이 빠를수록 빨리 바깥으로 밀려난다 (움직임 줄이기면 멈춘 채로)
+    const flow = REDUCE ? 0 : clock * (0.6 + 1.6 * t);
+    g.strokeStyle = '#ffffff'; g.lineCap = 'butt';
+    rushLines.forEach(l => {
+      const p = (l.off + flow) % 1;                       // 0 -> 1: 가운데 근처 -> 바깥
+      const r1 = reach * (0.3 + p * 0.75), r2 = r1 + l.len * (0.6 + t);
+      g.globalAlpha = t * 0.5 * p;                        // 바깥으로 갈수록 진하게
+      g.lineWidth = l.w;
+      g.beginPath();
+      g.moveTo(Math.round(cx + Math.cos(l.a) * r1), Math.round(cy + Math.sin(l.a) * r1));
+      g.lineTo(Math.round(cx + Math.cos(l.a) * r2), Math.round(cy + Math.sin(l.a) * r2));
+      g.stroke();
+    });
+    g.globalAlpha = 1;
+  }
+
+  function draw() {
+    g.fillStyle = '#0d1020'; g.fillRect(0, 0, W, H);
+    drawRush();
+    drawWarps();
+    bricks.forEach(drawGameBrick);
+    fx.forEach(f => {
+      const p = 1 - f.t / f.max;
+      if (f.kind === 'shock') {        // 깨진 벽돌 테두리가 바깥으로 퍼지는 충격파
+        const e = Math.round(p * 10);
+        g.strokeStyle = `rgba(255,255,255,${1 - p})`; g.lineWidth = 2;
+        g.strokeRect(f.x - e, f.y - e, f.w + e * 2, BH + e * 2);
+      }
+      if (f.kind === 'warpin') { g.fillStyle = `rgba(158,232,255,${1 - p})`; g.fillRect(f.x === 0 ? 0 : W - 14, f.y - 4, 14, WARP + 8); }
+      if (f.kind === 'warpout') { g.fillStyle = `rgba(255,176,182,${1 - p})`; g.fillRect(f.x - 4, 0, WARP + 8, 14); }
+      if (f.kind === 'warpmove') { g.fillStyle = `rgba(255,255,255,${.5 * (1 - p)})`; g.fillRect(0, 0, W, 4); g.fillRect(0, 0, 4, H); g.fillRect(W - 4, 0, 4, H); }
+    });
+    bits.forEach(p => { g.fillStyle = p.color; g.fillRect(Math.round(p.x), Math.round(p.y), 4, 4); });
+    drops.forEach(d => drawItem(d.type, d.x, d.y));
+    drawPaddle(Math.round(paddle));
+    balls.forEach(b => {
+      drawTail(b);
+      b.trail.forEach(([tx, ty], j) => { g.fillStyle = `rgba(255,243,224,${(j + 1) / 10})`; g.fillRect(Math.round(tx), Math.round(ty), BALL, BALL); });   // 돌파 잔상
+      drawBall(b.x, b.y);
+    });
+    $('launchHint').hidden = phase !== 'ready';   // 발사 안내 (캔버스 글씨는 작은 화면에서 뭉개져서 HTML 글자로)
+  }
+
+  // ---------- 범례: 특수 벽돌과 아이템 (게임과 같은 그리기 함수로 작은 캔버스에) ----------
+  function iconCanvas(w, h, paint) {
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    const old = g; g = c.getContext('2d'); paint(); g = old;
+    return c;
+  }
+  const LEGEND_BRICKS = {
+    top:   () => { drawBrick(1, 1, ROWS[0], 30); },
+    tough: () => { drawBrick(1, 1, TOUGH, 30); drawToughMarks(1, 1, 30); },
+    max:   () => { drawBrick(1, 1, MAXC, 30); drawMaxMarks(1, 1, 30, false); },
+  };
+  document.querySelectorAll('[data-legend-brick]').forEach(el => el.prepend(iconCanvas(32, 18, LEGEND_BRICKS[el.dataset.legendBrick])));
+  document.querySelectorAll('[data-legend-item]').forEach(el => el.prepend(iconCanvas(28, 16, () => drawItem(el.dataset.legendItem, 2, 2))));
+</script>
+</body>
+</html>

@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>걸음마: 걸음의 악마</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;500;700;900&family=Noto+Sans+KR:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c0c0d;
+    --bg-2: #141416;
+    --ink: #ecebe6;
+    --ink-dim: #9a988f;
+    --line: #2a2a2d;
+    --accent: #b8322a;      /* 낙관(도장) 붉은색 */
+    --gold: #c9a86a;
+    --serif: "Noto Serif KR", serif;
+    --sans: "Noto Sans KR", sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-weight: 300;
+    line-height: 1.9;
+    letter-spacing: -0.01em;
+    word-break: keep-all;
+    overflow-x: hidden;
+  }
+
+  /* ---------- HERO ---------- */
+  .hero {
+    position: relative;
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    padding: 80px 16px;
+    overflow: hidden;
+    background:
+      radial-gradient(ellipse at 50% 120%, rgba(184,50,42,.18), transparent 60%),
+      linear-gradient(180deg, #050506 0%, var(--bg) 100%);
+  }
+  .hero::before {               /* 거대한 배경 한자 */
+    content: "步";
+    position: absolute;
+    font-family: var(--serif);
+    font-weight: 900;
+    font-size: min(80vw, 760px);
+    line-height: 1;
+    color: rgba(255,255,255,.025);
+    top: 50%; left: 50%;
+    transform: translate(-50%, -52%);
+    pointer-events: none;
+  }
+  .hero-inner { position: relative; z-index: 1; }
+  .eyebrow {
+    font-size: .8rem;
+    letter-spacing: .6em;
+    color: var(--gold);
+    margin-bottom: 2.5rem;
+    padding-left: .6em;
+  }
+  .title {
+    font-family: var(--serif);
+    font-weight: 900;
+    font-size: clamp(3.2rem, 13vw, 9rem);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    text-shadow: 0 0 60px rgba(184,50,42,.25);
+  }
+  .title .colon { color: var(--accent); }
+  .title-sub {
+    display: block;
+    margin-top: 1.2rem;
+    font-size: .32em;
+    font-weight: 500;
+    letter-spacing: .5em;
+    padding-left: .5em;
+    color: var(--ink-dim);
+    text-shadow: none;
+  }
+  .seal {
+    display: inline-grid;
+    place-items: center;
+    width: 64px; height: 64px;
+    margin-top: 2.5rem;
+    border: 2px solid var(--accent);
+    color: var(--accent);
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 1.1rem;
+    line-height: 1.1;
+    transform: rotate(-4deg);
+  }
+  .tagline {
+    margin-top: 2.5rem;
+    font-family: var(--serif);
+    font-weight: 300;
+    font-size: clamp(1rem, 2.6vw, 1.35rem);
+    color: var(--ink-dim);
+  }
+  .scroll-hint {
+    position: absolute;
+    bottom: 32px; left: 50%;
+    transform: translateX(-50%);
+    font-size: .7rem;
+    letter-spacing: .4em;
+    color: var(--ink-dim);
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+  }
+  .scroll-hint::after {
+    content: "";
+    width: 1px; height: 48px;
+    background: linear-gradient(var(--ink-dim), transparent);
+    animation: drip 2.4s ease-in-out infinite;
+  }
+  @keyframes drip { 0%{transform:scaleY(0);transform-origin:top} 50%{transform:scaleY(1);transform-origin:top} 51%{transform-origin:bottom} 100%{transform:scaleY(0);transform-origin:bottom} }
+
+  /* ---------- SECTIONS ---------- */
+  section { padding: 140px 16px; }
+  .wrap { max-width: 960px; margin: 0 auto; }
+  .sec-head {
+    display: flex; align-items: baseline; gap: 20px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 20px;
+    margin-bottom: 64px;
+  }
+  .sec-num {
+    font-family: var(--serif);
+    color: var(--accent);
+    font-size: .9rem;
+    font-weight: 500;
+  }
+  .sec-title {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: clamp(1.6rem, 4vw, 2.4rem);
+    letter-spacing: -0.02em;
+  }
+  .sec-sub { margin-left: auto; color: var(--ink-dim); font-size: .8rem; letter-spacing: .3em; }
+
+  /* 이름 풀이 */
+  .name-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+  }
+  .name-cell { background: var(--bg); padding: 48px 40px; }
+  .name-cell .big {
+    font-family: var(--serif);
+    font-weight: 900;
+    font-size: clamp(2.4rem, 7vw, 4rem);
+    line-height: 1;
+    margin-bottom: 24px;
+  }
+  .name-cell .big small {
+    font-size: .35em; font-weight: 500; color: var(--gold);
+    margin-left: 12px; letter-spacing: .1em; vertical-align: middle;
+  }
+  .name-cell p { color: var(--ink-dim); }
+
+  /* 이름의 축약 */
+  .contract { margin-top: 120px; text-align: center; }
+  .contract-text {
+    font-family: var(--serif);
+    font-size: clamp(1.02rem, 2.4vw, 1.25rem);
+    color: var(--ink-dim);
+    line-height: 2.1;
+    margin-bottom: 56px;
+  }
+  .contract-text strong { color: var(--ink); font-weight: 700; }
+  .fusion {
+    font-family: var(--serif);
+    font-weight: 900;
+    font-size: clamp(2.4rem, 9vw, 5rem);
+    line-height: 1;
+    display: flex; justify-content: center; align-items: center;
+  }
+  .fusion .gap { width: .35em; }
+  .fusion .drop {
+    position: relative;
+    transition: opacity 1.4s ease 1.2s, color 1.4s ease 1.2s;
+  }
+  .fusion .drop::after {          /* 붉은 붓 획으로 지우기 */
+    content: "";
+    position: absolute;
+    left: -6%; top: 52%;
+    width: 112%; height: 4px;
+    background: var(--accent);
+    transform: scaleX(0) rotate(-6deg);
+    transform-origin: left;
+    transition: transform .6s ease .8s;
+  }
+  .fusion.on .drop { opacity: .18; }
+  .fusion.on .drop::after { transform: scaleX(1) rotate(-6deg); }
+  .fusion-arrow {
+    width: 1px; height: 72px;
+    margin: 40px auto;
+    background: linear-gradient(var(--line), var(--accent));
+  }
+  .fusion-result {
+    font-family: var(--serif);
+    font-weight: 900;
+    font-size: clamp(3.6rem, 14vw, 8rem);
+    line-height: 1;
+    letter-spacing: .08em;
+    margin-bottom: 88px;
+    text-shadow: 0 0 60px rgba(184,50,42,.3);
+  }
+  .fusion-result.on { transition-delay: 1.6s; }
+  .contract-final {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: clamp(1.2rem, 3vw, 1.6rem);
+    color: var(--gold);
+    letter-spacing: .02em;
+  }
+
+  /* 취미 */
+  .hobby { background: var(--bg-2); }
+  .lead {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: clamp(1.4rem, 3.6vw, 2.2rem);
+    line-height: 1.6;
+    margin-bottom: 56px;
+  }
+  .lead em { font-style: normal; color: var(--accent); }
+  .body-text { color: var(--ink-dim); max-width: 640px; font-size: 1.02rem; }
+  .body-text + .body-text { margin-top: 1.4em; }
+
+  .path {                         /* 발자국 길 */
+    display: flex; justify-content: space-between;
+    margin: 88px 0 0;
+    padding: 0 4px;
+  }
+  .path span {
+    width: 10px; height: 16px;
+    border-radius: 50% 50% 45% 45%;
+    background: var(--ink);
+    opacity: .12;
+    animation: step 4s infinite;
+  }
+  .path span:nth-child(odd) { transform: translateY(-10px); }
+  @keyframes step { 0%,100%{opacity:.08} 10%{opacity:.85;background:var(--accent)} 30%{opacity:.12;background:var(--ink)} }
+
+  /* 계율 */
+  .creed { list-style: none; counter-reset: c; }
+  .creed li {
+    counter-increment: c;
+    display: grid;
+    grid-template-columns: 96px 1fr;
+    gap: 24px;
+    padding: 40px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .creed li::before {
+    content: counter(c, cjk-ideographic);
+    font-family: var(--serif);
+    font-weight: 900;
+    font-size: 2.6rem;
+    line-height: 1;
+    color: var(--gold);
+  }
+  .creed h3 {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 1.35rem;
+    margin-bottom: 8px;
+  }
+  .creed p { color: var(--ink-dim); }
+
+  /* 마무리 */
+  .finale {
+    text-align: center;
+    padding: 180px 16px;
+    background: radial-gradient(ellipse at 50% 0%, rgba(201,168,106,.08), transparent 60%);
+  }
+  .finale blockquote {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: clamp(1.6rem, 5vw, 3rem);
+    line-height: 1.5;
+  }
+  .finale cite {
+    display: block;
+    margin-top: 32px;
+    font-style: normal;
+    color: var(--ink-dim);
+    letter-spacing: .3em;
+    font-size: .85rem;
+  }
+  footer {
+    border-top: 1px solid var(--line);
+    padding: 32px 16px;
+    text-align: center;
+    color: #5c5b56;
+    font-size: .75rem;
+    letter-spacing: .2em;
+  }
+
+  /* 스크롤 등장 */
+  .reveal { opacity: 0; transform: translateY(32px); transition: opacity 1.1s ease, transform 1.1s ease; }
+  .reveal.on { opacity: 1; transform: none; }
+  .hero .reveal { transition-duration: 1.6s; }
+  .hero .d1 { transition-delay: .2s; } .hero .d2 { transition-delay: .7s; }
+  .hero .d3 { transition-delay: 1.2s; } .hero .d4 { transition-delay: 1.6s; }
+
+  /* 달걀 도트 친구들 */
+  .egg-host { position: relative; }
+  .egg {
+    position: absolute;
+    z-index: 5;
+    background: none; border: 0; padding: 0;
+    line-height: 0;
+    cursor: pointer;
+  }
+  .egg:focus-visible { outline: 1px dashed var(--gold); outline-offset: 6px; }
+  .egg svg {
+    display: block;
+    transform-origin: 50% 100%;
+    filter: drop-shadow(0 6px 6px rgba(0,0,0,.55));
+    animation: egg-idle 3.2s ease-in-out infinite;
+  }
+  .egg.boing svg { animation: egg-boing .45s ease; }
+  @keyframes egg-idle { 0%,78%,100% { transform: translateY(0); } 86% { transform: translateY(-5px); } 92% { transform: translateY(0); } }
+  @keyframes egg-boing {
+    0% { transform: scale(1, 1); }
+    30% { transform: scale(1.18, .82); }
+    60% { transform: scale(.9, 1.12) translateY(-7px); }
+    100% { transform: scale(1, 1); }
+  }
+  .egg-bubble {
+    position: absolute;
+    bottom: calc(100% + 14px);
+    left: -8px;
+    white-space: nowrap;
+    background: var(--bg-2);
+    border: 1px solid var(--gold);
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: .85rem;
+    font-weight: 500;
+    line-height: 1.4;
+    padding: 6px 14px;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity .25s ease, transform .25s ease;
+    pointer-events: none;
+  }
+  .egg-bubble::after {
+    content: "";
+    position: absolute;
+    top: 100%; left: 18px;
+    width: 8px; height: 8px;
+    background: var(--bg-2);
+    border-right: 1px solid var(--gold);
+    border-bottom: 1px solid var(--gold);
+    transform: translateY(-4px) rotate(45deg);
+  }
+  .egg.right .egg-bubble { left: auto; right: -8px; }
+  .egg.right .egg-bubble::after { left: auto; right: 18px; }
+  .egg.talk .egg-bubble { opacity: 1; transform: none; }
+
+  @media (max-width: 640px) {
+    section { padding: 96px 16px; }
+    .name-grid { grid-template-columns: 1fr; }
+    .name-cell { padding: 36px 24px; }
+    .sec-sub { display: none; }
+    .creed li { grid-template-columns: 56px 1fr; gap: 16px; }
+    .creed li::before { font-size: 1.9rem; }
+    .path span:nth-child(n+13) { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { opacity: 1; transform: none; transition: none; }
+    .path span, .scroll-hint::after, .egg svg { animation: none !important; }
+    .egg-bubble { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-inner">
+    <p class="eyebrow reveal d1">PROFILE · 自己紹介</p>
+    <h1 class="title reveal d2">걸음마<span class="colon">:</span><span class="title-sub">걸음의 악마</span></h1>
+    <div class="seal reveal d3">步<br>魔</div>
+    <p class="tagline reveal d4">길이 끝나는 곳에서, 나의 걸음은 시작된다.</p>
+  </div>
+  <div class="scroll-hint">SCROLL</div>
+</header>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="sec-num">壹</span>
+      <h2 class="sec-title">이름에 대하여</h2>
+      <span class="sec-sub">NAME</span>
+    </div>
+    <div class="name-grid reveal">
+      <div class="name-cell">
+        <div class="big">걸음<small>步</small></div>
+        <p>한 발을 내딛고, 다시 한 발을 내딛는 일.<br>세상에서 가장 단순하지만, 끝까지 해내는 사람은 드문 일.</p>
+      </div>
+      <div class="name-cell">
+        <div class="big">악마<small>魔</small></div>
+        <p>멈출 줄 모르는 집념. 남들이 “이제 그만 돌아가자” 할 때<br>“조금만 더 가 보자”를 말하는 고집.</p>
+      </div>
+    </div>
+
+    <div class="contract">
+      <p class="contract-text reveal">
+        그러나 이름은 너무 길었다.<br>
+        길 위에서는 숨 한 번조차 아껴야 하는 법.<br>
+        다섯 글자는 무거웠고, 걸음은 가벼워야 했다.
+      </p>
+      <p class="contract-text reveal">
+        하여, 이름의 심장만을 남기기로 하였다.<br>
+        <strong>걸음</strong>의 근본과, <strong>악마</strong>의 마지막 숨결을.
+      </p>
+
+      <div class="fusion reveal" aria-label="걸음의 악마에서 걸음마로">
+        <span class="k">걸</span><span class="k">음</span><span class="k drop">의</span><span class="gap"></span><span class="k drop">악</span><span class="k">마</span>
+      </div>
+      <div class="fusion-arrow reveal" aria-hidden="true"></div>
+      <div class="fusion-result reveal">걸음마</div>
+
+      <p class="contract-text reveal">
+        세 글자. 더 이상 덜어낼 것도, 더할 것도 없는 이름.<br>
+        이 이름을 처음 들은 이들은 대개 잠시 말을 잃는다.
+      </p>
+      <p class="contract-final reveal">모든 위대한 여정은, 걸음마에서 시작되었다.</p>
+    </div>
+  </div>
+</section>
+
+<section class="hobby">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="sec-num">貳</span>
+      <h2 class="sec-title">장거리 산책</h2>
+      <span class="sec-sub">LONG WALK</span>
+    </div>
+    <p class="lead reveal">목적지는 중요하지 않다.<br><em>걷는다</em>는 사실, 그 자체가 전부다.</p>
+    <p class="body-text reveal">
+      나의 취미는 장거리 산책이다. 지도 앱을 닫고, 이어폰을 빼고, 그저 발이 이끄는 대로 걷는다.
+      동네 골목에서 시작한 걸음은 강변을 따라 이어지고, 다리를 건너, 해가 질 무렵엔 처음 보는 동네에 닿는다.
+    </p>
+    <p class="body-text reveal">
+      몇 시간이고 걷다 보면 머릿속의 소음이 하나씩 꺼진다.
+      남는 것은 규칙적인 발소리와 숨소리, 그리고 조용히 바뀌어 가는 풍경뿐.
+      걷는 동안 나는 생각을 정리하고, 계절을 몸으로 느끼고, 도시의 진짜 얼굴을 만난다.
+    </p>
+    <div class="path" aria-hidden="true">
+      <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="sec-num">參</span>
+      <h2 class="sec-title">걸음의 계율</h2>
+      <span class="sec-sub">CREED</span>
+    </div>
+    <ol class="creed">
+      <li class="reveal"><div><h3>멈추지 않는다</h3><p>빠르지 않아도 괜찮다. 다만, 멈추지 않을 뿐이다.</p></div></li>
+      <li class="reveal"><div><h3>길을 고르지 않는다</h3><p>오르막도, 낯선 골목도, 비 오는 날의 젖은 보도도 모두 같은 길이다.</p></div></li>
+      <li class="reveal"><div><h3>돌아보지 않는다</h3><p>지나온 거리는 발이 기억한다. 눈은 언제나 앞을 본다.</p></div></li>
+      <li class="reveal"><div><h3>끝은 내가 정한다</h3><p>길이 끝나는 곳이 아니라, 내가 충분하다고 느끼는 곳이 끝이다.</p></div></li>
+    </ol>
+  </div>
+</section>
+
+<div class="finale">
+  <blockquote class="reveal">천 리 길도<br>한 걸음부터.<br>그리고 나는, 그 한 걸음을<br>천 번 내딛는다.</blockquote>
+  <cite class="reveal">— 걸음마</cite>
+</div>
+
+<footer>© 걸음마: 걸음의 악마 · 오늘도 걷는 중</footer>
+
+<script>
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('on'); io.unobserve(e.target); } });
+  }, { threshold: 0.15 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+  // 발자국이 차례로 찍히도록 지연 설정
+  document.querySelectorAll('.path span').forEach((s, i) => s.style.animationDelay = (i * 0.2) + 's');
+
+  // 달걀 도트 캐릭터: w 흰자, s 그림자, e 눈, m 입, b 볼터치
+  const EGG = [
+    '...wwww...',
+    '..wwwwww..',
+    '.wwwwwwws.',
+    '.wwwwwwws.',
+    'wwwwwwwwws',
+    'wwewwwwews',
+    'wbwwmmwwbs',
+    'wwwwwwwwss',
+    'wwwwwwwwss',
+    '.wwwwwwss.',
+    '..wwwsss..',
+    '...ssss...',
+  ];
+  const EGG_COLORS = { w: '#f3efe4', s: '#c9c0aa', e: '#151515', m: '#151515', b: '#e07a6f' };
+  const eggSVG = (() => {
+    let px = '';
+    EGG.forEach((row, y) => [...row].forEach((c, x) => {
+      if (EGG_COLORS[c]) px += `<rect x="${x}" y="${y}" width="1" height="1" fill="${EGG_COLORS[c]}"/>`;
+    }));
+    return `<svg viewBox="0 0 10 12" width="30" height="36" shape-rendering="crispEdges" aria-hidden="true">${px}</svg>`;
+  })();
+
+  const LINES = ['반가웡!', '안녕하세용!', '어서 오세용!', '만나서 기뻥!', '같이 걸을랭?'];
+  const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const rand = (min, max) => min + Math.random() * (max - min);
+
+  // 섹션마다 한 마리씩, 위·아래 여백 중 한 곳의 왼쪽·오른쪽 아무 데나
+  const hosts = [...document.querySelectorAll('.hero, section, .finale')];
+  shuffle(LINES.slice()).forEach((line, i) => {
+    const host = hosts[i];
+    host.classList.add('egg-host');
+
+    const egg = document.createElement('button');
+    egg.type = 'button';
+    egg.className = 'egg';
+    egg.setAttribute('aria-label', '달걀 친구: ' + line);
+    egg.innerHTML = eggSVG + `<span class="egg-bubble" role="status">${line}</span>`;
+
+    const onRight = Math.random() < 0.5;
+    if (onRight) egg.classList.add('right');
+    egg.style.left = (onRight ? rand(62, 88) : rand(5, 34)) + '%';
+    egg.style[Math.random() < 0.5 ? 'top' : 'bottom'] = rand(52, 60) + 'px';
+    egg.querySelector('svg').style.animationDelay = rand(0, 3) + 's';
+
+    let timer;
+    egg.addEventListener('click', () => {
+      egg.classList.remove('boing');
+      void egg.offsetWidth;          // 애니메이션 재시작
+      egg.classList.add('boing', 'talk');
+      clearTimeout(timer);
+      timer = setTimeout(() => egg.classList.remove('talk'), 2200);
+    });
+    egg.addEventListener('animationend', () => egg.classList.remove('boing'));
+
+    host.appendChild(egg);
+  });
+</script>
+</body>
+</html>

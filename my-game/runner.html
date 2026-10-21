@@ -1,0 +1,1298 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>달걀 점프 · 호성 오락실</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 12' shape-rendering='crispEdges'%3E%3Cpath fill='%23f3efe4' d='M3 0h4v1h1v1h1v2h1v5h-1v2h-2v1h-4v-1h-2v-2h-1v-5h1v-2h1v-1h1z'/%3E%3Cpath fill='%23151515' d='M2 5h1v1h-1zM7 5h1v1h-1zM4 6h2v1h-2z'/%3E%3Cpath fill='%23e07a6f' d='M1 6h1v1h-1zM8 6h1v1h-1z'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/galmuri.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/pretendard.css">
+<style>
+  :root {
+    --room: #171a2e;
+    --room-2: #22264a;
+    --line: #2c3160;
+    --ink: #1d2236;
+    --paper: #f1f2f7;
+    --dim: #a9aecb;
+    --mute: #5a5f86;
+    --screen: #0d1020;
+    --btn: #ffcf3f;
+    --btn-deep: #c99a12;
+    --ion-lime: #c6f04a;
+    --warn: #ff5a6e;
+    /* 게임기 몸통 색: 달걀 점프는 분홍 */
+    --c: #ff7a9a;
+    --c-deep: #e2577c;
+    --c-ink: #6b1f3c;
+    --pixel: "Galmuri11", monospace;
+    --sans: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    background-color: var(--room);
+    color: var(--paper);
+    font-family: var(--sans);
+    line-height: 1.7;
+    word-break: keep-all;
+    overflow-x: hidden;
+  }
+  /* 바깥 배경 (사용자 선택 2026-10-20): 게임 속 하늘(밤→새벽→낮→저녁)을 아주 어둡게 낮춘 색이 함께 천천히 바뀐다.
+     색은 스크립트가 --out-top / --out-mid / --out-bot 으로 넣는다. 게임기가 계속 돋보이도록 늘 어둡게 */
+  .outside {
+    position: fixed; inset: 0; z-index: -1;
+    background: linear-gradient(180deg, var(--out-top, #10132a) 0%, var(--out-mid, #141832) 55%, var(--out-bot, #191d3d) 100%);
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .outside .world { position: absolute; inset: 0; width: 100%; height: 100%; }
+  /* 아주 느리게 떠다니는 흰 깃털 (게임 속 깃털 그림 그대로, 옅게) */
+  .drift {
+    position: absolute; top: -60px;
+    width: var(--w); aspect-ratio: 1;
+    opacity: var(--o);
+    animation: drift var(--d) linear var(--delay) infinite;
+  }
+  .drift > i {   /* 안쪽은 좌우로 살랑 (떨어지기와 흔들기를 따로 움직여서 겹치지 않게) */
+    display: block; width: 100%; height: 100%;
+    background: var(--feather) center / contain no-repeat;
+    image-rendering: pixelated;
+    animation: sway calc(var(--d) / 5) ease-in-out infinite alternate;
+  }
+  @keyframes drift { to { transform: translate(var(--dx), calc(100vh + 120px)); } }
+  @keyframes sway { from { transform: translateX(-18px) rotate(-14deg); } to { transform: translateX(18px) rotate(10deg); } }
+  ::selection { background: var(--c); color: #fff; }
+  :focus-visible { outline: 2px dashed var(--btn); outline-offset: 4px; }
+  svg { display: block; }
+  [hidden] { display: none !important; }
+
+  .top { max-width: 960px; margin: 0 auto; padding: 24px 16px 0; }
+  .back {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 10px 16px;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--pixel);
+    font-size: 12px;
+    text-decoration: none;
+    box-shadow: 0 -2px 0 var(--ink), 0 2px 0 var(--ink), -2px 0 0 var(--ink), 2px 0 0 var(--ink),
+                0 6px 12px -4px rgba(0,0,0,.4);
+    transition: transform .08s;
+  }
+  .back:hover { background: var(--btn); }
+  .back:active { transform: translateY(3px); }
+
+  main { max-width: 960px; margin: 0 auto; padding: 32px 16px 64px; text-align: center; }
+  h1, .marquee { font-family: var(--pixel); font-weight: 400; }
+  .sub { margin-top: 12px; color: var(--dim); }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* ---------- 게임기 (게임 화면) ---------- */
+  .cabinet {
+    margin: 40px auto 0;
+    max-width: 720px;
+    background: var(--c);
+    padding: 20px 20px 28px;
+    border-radius: 24px 24px 12px 12px;
+    box-shadow: 0 30px 50px -20px rgba(0,0,0,.6);
+  }
+  /* 부딪히면 게임기가 부르르 */
+  .cabinet.rumble { animation: rumble .28s steps(7, end); }
+  @keyframes rumble {
+    0% { translate: 4px 0; } 15% { translate: -5px 1px; } 30% { translate: 5px -1px; } 45% { translate: -4px 1px; }
+    60% { translate: 3px 0; } 80% { translate: -1px 0; } 100% { translate: 0 0; }
+  }
+  .marquee { font-size: 24px; line-height: 1.4; color: var(--c-ink); margin-bottom: 14px; }
+  .bezel { background: var(--c-ink); padding: 12px; border-radius: 10px; }
+  .screen { position: relative; background: var(--screen); border-radius: 4px; overflow: hidden; }
+  canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    image-rendering: pixelated;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .hud {
+    position: absolute; top: 10px; left: 14px; right: 14px; z-index: 1;
+    display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    font-family: var(--pixel); font-size: 12px;
+    color: var(--paper);
+    text-shadow: 2px 0 0 var(--screen), -2px 0 0 var(--screen), 0 2px 0 var(--screen), 0 -2px 0 var(--screen);
+    pointer-events: none;
+  }
+  /* HUD 오른쪽: 최고 기록 + 소리 켜기/끄기 버튼 (HUD는 클릭이 통과하지만 이 버튼만 눌린다) */
+  .hud-r { display: inline-flex; align-items: center; gap: 8px; }
+  .hud > * { white-space: nowrap; }
+  .sound {
+    pointer-events: auto;
+    display: inline-grid; place-items: center;
+    min-width: 32px; height: 24px; padding: 0 6px;
+    background: var(--c-ink);
+    border: 0; border-radius: 999px;
+    cursor: pointer;
+  }
+  .sound:hover { background: #8a2a50; }
+  .sound .off-ic, .sound[aria-pressed="false"] .on-ic { display: none; }
+  .sound[aria-pressed="false"] .off-ic { display: block; }
+  /* 속도 단계 알약 (벽돌 깨기 계기판과 같은 모양): 100m마다 한 칸 */
+  .gauge {
+    display: inline-flex; align-items: center; gap: 2px;
+    padding: 3px 9px;
+    background: var(--c-ink);
+    border-radius: 999px;
+    text-shadow: none;
+  }
+  .gauge > span { margin-right: 4px; }
+  .gauge i { display: block; opacity: .25; }
+  .gauge i.on { opacity: 1; }
+  .gauge.max i.on { animation: blink .3s steps(1, end) infinite; }
+
+  .overlay {
+    position: absolute; inset: 0; z-index: 2;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+    font-family: var(--pixel);
+    color: var(--paper);
+    background: rgba(13,16,32,.3);
+    pointer-events: none;
+  }
+  .overlay strong { font-weight: 400; font-size: 24px; color: var(--btn); }
+  .overlay p { font-size: 12px; animation: blink 1s steps(1, end) infinite; }
+  /* 결과판: 다른 게임과 같은 검은 반투명 막 + 뒤 흐림 */
+  .overlay.result {
+    gap: 4px;
+    background: rgba(8, 8, 10, .72);
+    -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px);
+    pointer-events: auto;
+  }
+  .overlay.result p { animation: none; color: var(--dim); }
+  .result .over { font-size: 24px; color: var(--warn); }
+  .result .final { font-size: 36px; line-height: 1.1; color: var(--ion-lime); font-variant-numeric: tabular-nums; }
+  .result .final small { font-size: 16px; color: var(--paper); }
+  .result .stats { font-size: 12px; color: var(--paper); }
+  .result .stats b { font-weight: 400; color: var(--btn); }
+  .result .record { color: var(--ion-lime); }
+  .result .again {
+    margin-top: 6px;
+    padding: 8px 22px;
+    border: 0; border-radius: 999px;
+    background: var(--btn);
+    color: var(--c-ink);
+    font-family: var(--pixel); font-size: 16px;
+    box-shadow: inset 0 0 0 3px #ffdd6e, 0 5px 0 var(--btn-deep);
+    cursor: pointer;
+  }
+  .result .again:active { transform: translateY(4px); box-shadow: inset 0 0 0 3px #ffdd6e, 0 1px 0 var(--btn-deep); }
+  .result .again:focus-visible { outline: none; }   /* 자동으로 고를 때 점선 테두리는 그리지 않음 */
+
+  /* 캔버스 위에 잠깐 뜨는 글자 (작은 화면에서도 또렷하게 HTML 글자로) */
+  .bfloat {
+    position: absolute; z-index: 1;
+    translate: -50% -50%;
+    font-family: var(--pixel); font-weight: 700; font-size: 16px; line-height: 1; white-space: nowrap;
+    pointer-events: none;
+    --ol: #0d1020;
+    text-shadow: 2px 0 0 var(--ol), -2px 0 0 var(--ol), 0 2px 0 var(--ol), 0 -2px 0 var(--ol), 0 4px 0 var(--ol);
+    animation: bfloat .9s steps(9, end) forwards;
+  }
+  .bfloat.good { color: var(--ion-lime); }
+  .bfloat.feather { color: #9ee8ff; font-size: 12px; }
+  .bfloat.near { color: #00b4ff; }
+  .bfloat.speed { color: var(--btn); font-size: 24px; }
+  .bfloat.record { color: var(--ion-lime); font-size: 24px; }
+  @keyframes bfloat {
+    0%   { opacity: 0; transform: translateY(6px) scale(.8); }
+    20%  { opacity: 1; transform: translateY(0) scale(1.1); }
+    35%  { transform: scale(1); }
+    75%  { opacity: 1; }
+    100% { opacity: 0; transform: translateY(-18px); }
+  }
+
+  /* 늘어난 땅 속: 왼쪽 '깃털' 글자, 오른쪽 '+N' (스티커 자체는 캔버스에 그린다. 글자는 작은 화면에서 또렷하게 HTML로) */
+  .soil {
+    position: absolute; top: 94%; z-index: 1;   /* 땅 맨 아래 스티커 줄 높이에 맞춤 */
+    translate: 0 -50%;
+    font-family: var(--pixel); font-size: 12px; line-height: 1;
+    color: var(--dim);
+    text-shadow: 2px 0 0 var(--screen), -2px 0 0 var(--screen), 0 2px 0 var(--screen), 0 -2px 0 var(--screen);
+    pointer-events: none;
+  }
+  .soil.label { left: 12px; }
+  .soil.more { right: 12px; color: var(--btn); }
+  .controls { display: flex; justify-content: center; align-items: center; gap: 22px; margin-top: 22px; }
+  .push {
+    flex: none;
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    border: 0;
+    background: var(--btn);
+    box-shadow: inset 0 -4px 0 var(--btn-deep), 0 4px 6px -2px rgba(0,0,0,.4);
+    font-family: var(--pixel); font-size: 12px; color: var(--c-ink);
+    cursor: pointer;
+    touch-action: none;
+    -webkit-user-select: none; user-select: none;
+    -webkit-touch-callout: none;
+  }
+  .push:active:not(:disabled), .push.held { transform: translateY(4px); box-shadow: inset 0 -2px 0 var(--btn-deep); }
+  .push:disabled { background: var(--c-deep); box-shadow: none; color: var(--c-ink); cursor: default; }
+  .push.duck { background: #ffe7ee; box-shadow: inset 0 -4px 0 #e2a9bb, 0 4px 6px -2px rgba(0,0,0,.4); }
+  .push.duck.held { box-shadow: inset 0 -2px 0 #e2a9bb; }
+  .how { font-family: var(--pixel); font-size: 12px; color: var(--c-ink); text-align: left; line-height: 1.8; }
+  /* 생존 규칙 안내: 게임기 아래 밝은 띠 */
+  .rule {
+    margin-top: 18px; padding: 10px 16px;
+    background: rgba(255, 255, 255, .45);
+    border-radius: 12px;
+    color: var(--c-ink);
+    text-align: left;
+  }
+  .rule strong { display: block; font-family: var(--pixel); font-weight: 400; font-size: 12px; margin-bottom: 4px; }
+  .rule ul { list-style: none; display: grid; gap: 2px; font-size: 13px; line-height: 1.6; }
+  .rule li { position: relative; padding-left: 14px; }
+  .rule li::before { content: ""; position: absolute; left: 2px; top: .65em; width: 5px; height: 5px; background: var(--c-ink); }   /* 네모 도트 글머리 */
+  .rule b { font-weight: 700; }
+
+  @media (max-width: 600px) {
+    .cabinet { padding: 14px 12px 20px; }
+    .bezel { padding: 8px; }
+    .controls { gap: 12px 18px; flex-wrap: wrap; justify-content: space-between; padding: 0 4px; }   /* 양손 엄지로 누르기 좋게 버튼을 양옆 끝으로 (사용자 요청) */
+    .push.duck { order: -1; }   /* 많은 러너 게임처럼 점프는 오른손(오른쪽), 숙이기는 왼손(왼쪽) (사용자 요청) */
+    .soil.label { left: 6px; }
+    .soil.more { right: 6px; }
+    .how { flex-basis: 100%; text-align: center; }   /* 휴대폰에선 안내를 버튼 아래로 */
+    .hud { top: 6px; left: 8px; right: 8px; }
+    .gauge { padding: 2px 6px; gap: 1px; }
+    .gauge { gap: 0; }
+    .gauge i svg { width: 4px; height: auto; }   /* 24칸이 휴대폰 HUD에 들어가도록 화살표를 작게 (도트 한 칸 = 1px) */
+    .gauge > span { display: none; }              /* 휴대폰에선 '속도' 글자를 빼고 화살표만 (최고 기록이 두 줄로 꺾이지 않게) */
+    .result .final { font-size: 24px; }
+    .result .over { font-size: 16px; }
+    .result .again { padding: 6px 16px; font-size: 12px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .drift, .drift > i { animation: none; }
+    .drift { top: var(--rest); }
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="outside" id="outside" aria-hidden="true"></div>
+
+<header class="top">
+  <a class="back" href="arcade.html"><span data-back></span>게임 목록</a>
+</header>
+
+<main>
+  <p class="sub">달걀이 김밥과 닭강정을 뛰어넘고, 날아오는 떡꼬치는 숙여서 피하며 멀리 걸어가는 게임이에요.</p>
+  <section class="cabinet" aria-label="달걀 점프 게임기">
+    <h1 class="marquee">달걀 점프</h1>
+    <div class="bezel">
+      <div class="screen" id="screen">
+        <canvas id="game" width="480" height="232" aria-label="게임 화면. 스페이스바나 화면을 눌러 점프, 아래 방향키로 숙이기"></canvas>
+        <div class="hud">
+          <span id="score">0m</span>
+          <span class="gauge" id="gauge" role="img" aria-label="속도 1단계"><span>속도</span><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          <span class="hud-r"><span id="best">최고 0m</span><button type="button" class="sound" id="soundBtn" aria-pressed="true" aria-label="소리 끄기"></button></span>
+        </div>
+        <span class="soil label" id="featherLabel">깃털 0개</span>
+        <span class="soil more" id="featherMore" hidden>+0</span>
+        <div class="overlay" id="overlay"><strong id="ovTitle">달걀 점프</strong><p id="ovText">스페이스바 · 화면 터치로 시작</p></div>
+        <div class="overlay result" id="endPanel" hidden>
+          <strong class="over">Game Over!</strong>
+          <span class="final" aria-live="polite"><b id="finalDist">0</b><small>m 걸었어요</small></span>
+          <p class="stats">모은 깃털 총 <b id="finalFeather">0</b>개 · 아슬아슬 <b id="finalNear">0</b>번</p>
+          <p id="endLine"></p>
+          <button type="button" class="again" id="againBtn">다시 하기</button>
+        </div>
+      </div>
+    </div>
+    <div class="controls">
+      <button type="button" class="push" id="jumpBtn">점프</button>
+      <button type="button" class="push duck" id="duckBtn">숙이기</button>
+      <p class="how">스페이스바 · ↑ · 화면 터치는 점프<br>(길게 누르면 높이, 짧게는 낮게)<br>↓ 는 숙이기 (공중에선 빨리 내려와요)<br>M 은 소리 켜기 · 끄기</p>
+    </div>
+    <div class="rule">
+      <strong>한 번 버티기</strong>
+      <ul>
+        <li>부딪히면 깃털 <b>절반</b>을 잃어요 (5개면 2개)</li>
+        <li>속도 <b>16단계 이상</b>(무지개 달걀)에서 깃털 <b>10개 이상</b>이면 버텨요</li>
+        <li>버티면 속도가 10단계 내려가요</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<script>
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const store = {
+    get(k) { try { return Number(localStorage.getItem(k)) || 0; } catch (_) { return 0; } },
+    set(k, v) { try { localStorage.setItem(k, String(v)); } catch (_) {} },
+  };
+  const $ = (id) => document.getElementById(id);
+
+  // ---------- 소리: 파일 없이 Web Audio로 바로 만드는 8비트 소리 (사용자 요청 2026-10-20) ----------
+  // 소리가 안 되는 환경이어도 게임은 그대로 돈다 (모두 try/catch)
+  const SFX_VOL = 0.35, MUSIC_VOL = 0.12;
+  let audio = null, master = null, musicBus = null, noiseBuf = null;
+  let soundOn = (() => { try { return localStorage.getItem('egg-jump-sound') !== 'off'; } catch (_) { return true; } })();
+  function ensureAudio() {            // 브라우저는 사용자가 누른 뒤에만 소리를 허락한다 → 누를 때마다 깨운다
+    try {
+      if (!audio) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return null;
+        audio = new AC();
+        master = audio.createGain(); master.gain.value = soundOn ? 1 : 0; master.connect(audio.destination);
+        musicBus = audio.createGain(); musicBus.gain.value = MUSIC_VOL; musicBus.connect(master);
+        noiseBuf = audio.createBuffer(1, audio.sampleRate, audio.sampleRate);
+        const d = noiseBuf.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      }
+      if (audio.state === 'suspended') audio.resume();
+      return audio;
+    } catch (_) { return null; }
+  }
+  const hz = (n) => 440 * Math.pow(2, (n - 69) / 12);            // 음 번호(69 = 라) → 주파수
+  const NOTE = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+  const note = (t) => (Number(t.slice(-1)) + 1) * 12 + NOTE[t[0]] + (t[1] === '#' ? 1 : 0);   // 'E5' → 76
+  // 소리 하나: 파형(square/triangle/noise), 주파수 f0 → f1로 미끄러짐, 짧게 켜졌다 줄어드는 볼륨
+  function tone({ type = 'square', f0 = 440, f1 = f0, dur = 0.1, vol = 1, delay = 0, out = null }) {
+    if (!audio || !soundOn) return;
+    try {
+      const t0 = audio.currentTime + delay;
+      const g = audio.createGain();
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(vol * (out ? 1 : SFX_VOL), t0 + 0.005);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      g.connect(out || master);
+      let src;
+      if (type === 'noise') {
+        src = audio.createBufferSource(); src.buffer = noiseBuf;
+        const bp = audio.createBiquadFilter(); bp.type = 'bandpass';
+        bp.frequency.setValueAtTime(f0, t0); bp.frequency.exponentialRampToValueAtTime(Math.max(40, f1), t0 + dur);
+        src.connect(bp); bp.connect(g);
+      } else {
+        src = audio.createOscillator(); src.type = type;
+        src.frequency.setValueAtTime(f0, t0); src.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t0 + dur);
+        src.connect(g);
+      }
+      src.start(t0); src.stop(t0 + dur + 0.02);
+    } catch (_) {}
+  }
+  const seq = (notes, step, o = {}) => notes.forEach((n, i) => n && tone({ f0: hz(note(n)), dur: step * 1.6, delay: i * step, ...o }));
+  // 같은 소리가 한 프레임에 몰려 터지지 않게 이름별 최소 간격
+  const sfxGap = { feather: 0.04, land: 0.06, near: 0.15 }, sfxLast = {};
+  let featherChain = 0, featherChainT = 0;
+  function sfx(name, n = 0) {
+    if (!audio || !soundOn) return;
+    const now = audio.currentTime;
+    if (sfxGap[name] && now - (sfxLast[name] || -9) < sfxGap[name]) return;
+    sfxLast[name] = now;
+    switch (name) {
+      case 'start': tone({ f0: 880, dur: 0.07, vol: 0.6 }); break;
+      case 'jump': tone({ f0: 300, f1: 640, dur: 0.09, vol: 0.55 }); break;
+      case 'land': tone({ type: 'noise', f0: 900, f1: 300, dur: 0.05, vol: 0.5 }); break;
+      case 'duck': tone({ type: 'triangle', f0: 420, f1: 160, dur: 0.08, vol: 0.7 }); break;
+      case 'feather': {                         // 연속으로 주우면 반음씩 올라간다 (0.6초 안에)
+        featherChain = now - featherChainT < 0.6 ? Math.min(featherChain + 1, 12) : 0;
+        featherChainT = now;
+        const b = note('E6') + featherChain;
+        tone({ f0: hz(b), dur: 0.06, vol: 0.5 });
+        tone({ f0: hz(b + 7), dur: 0.14, vol: 0.5, delay: 0.06 });
+        break;
+      }
+      case 'near': seq(['A6', 'C#7', 'E7'], 0.035, { vol: 0.35 }); break;
+      case 'stage': seq(['C5', 'E5', 'G5', 'C6'], 0.06, { vol: 0.45 }); break;
+      case 'max':
+        seq(['C5', 'E5', 'G5', 'C6', 'E6', 'G6', 'C7'], 0.055, { vol: 0.45 });
+        for (let i = 0; i < 4; i++) tone({ type: 'triangle', f0: hz(note('C7')) + i * 90, dur: 0.12, vol: 0.4, delay: 0.4 + i * 0.07 });
+        break;
+      case 'record': seq(['G5', 'C6', 'E6', '', 'G6'], 0.08, { vol: 0.5 }); break;
+      case 'crash':
+        tone({ type: 'noise', f0: 1600, f1: 120, dur: 0.45, vol: 1 });
+        tone({ f0: 400, f1: 60, dur: 0.6, vol: 0.6 });
+        break;
+      case 'shield':
+        tone({ type: 'square', f0: 1320, f1: 1250, dur: 0.18, vol: 0.5 });
+        tone({ type: 'triangle', f0: 1980, f1: 1900, dur: 0.25, vol: 0.4 });
+        tone({ f0: 300, f1: 900, dur: 0.18, vol: 0.4, delay: 0.12 });
+        break;
+      case 'lose':                              // 잃은 깃털이 흩어지는 소리 (최대 6번)
+        for (let i = 0; i < Math.min(n, 6); i++) tone({ f0: 1500 + Math.random() * 900, f1: 700, dur: 0.07, vol: 0.3, delay: 0.05 + i * 0.04 });
+        break;
+      case 'win': seq(['C6', 'E6', 'G6', 'C7'], 0.1, { vol: 0.5 }); break;
+      case 'over': seq(['E5', 'C5', 'A4'], 0.16, { type: 'triangle', vol: 0.8 }); break;
+    }
+  }
+
+  // 배경음악: 8마디 반복 (C · Am · F · G). 한 칸 = 8분음표, '.' = 쉼표
+  const MELODY = (
+    'E5 G5 C6 G5 E5 G5 C6 . ' + 'E5 A5 C6 A5 E5 A5 C6 B5 ' + 'A5 . F5 A5 C6 . A5 F5 ' + 'G5 B5 D6 B5 G5 . D5 . ' +
+    'E5 G5 C6 E6 D6 C6 G5 . ' + 'A5 C6 E6 C6 A5 . E5 . ' + 'F5 A5 C6 F6 E6 D6 C6 A5 ' + 'B5 . D6 . G6 . . .'
+  ).trim().split(' ');
+  const BASS = ('C3 G3 C3 G3 A2 E3 A2 E3 F2 C3 F2 C3 G2 D3 G2 D3 ').repeat(2).trim().split(' ');   // 한 칸 = 4분음표
+  const BPM0 = 120, BPM_PRE = 160, BPM_RAINBOW = 170, BPM_MAX = 200;   // 최고 템포 200 (사용자 요청)
+  let musicTimer = 0, musicNext = 0, musicStep = 0, musicGain = null;
+  // 템포 배분: 1~15단계는 120 → 160으로 고르게, 무지개 달걀(16단계)이 되는 순간 170으로 한 번 뛰고, 24단계(최고 속도)까지 200으로
+  const bpm = () => stage < RAINBOW_STAGE
+    ? BPM0 + (BPM_PRE - BPM0) * stage / (RAINBOW_STAGE - 1)
+    : BPM_RAINBOW + (BPM_MAX - BPM_RAINBOW) * (stage - RAINBOW_STAGE) / (STAGE_MAX - 1 - RAINBOW_STAGE);
+  function musicTick() {                      // 0.1초 앞까지 음표를 미리 예약 → 화면이 버벅여도 박자가 밀리지 않는다
+    if (!audio || !musicGain) return;
+    const eighth = 30 / bpm();
+    while (musicNext < audio.currentTime + 0.1) {
+      const i = musicStep % MELODY.length;
+      if (MELODY[i] !== '.') tone({ f0: hz(note(MELODY[i])), dur: eighth * 0.9, vol: 0.5, out: musicGain, delay: Math.max(0, musicNext - audio.currentTime) });
+      if (i % 2 === 0) tone({ type: 'triangle', f0: hz(note(BASS[i / 2])), dur: eighth * 1.8, vol: 0.9, out: musicGain, delay: Math.max(0, musicNext - audio.currentTime) });
+      musicNext += eighth; musicStep++;
+    }
+  }
+  function musicStart() {
+    musicStop();
+    if (!ensureAudio() || !soundOn) return;
+    musicGain = audio.createGain(); musicGain.gain.value = 1; musicGain.connect(musicBus);
+    musicNext = audio.currentTime + 0.05; musicStep = 0;
+    musicTimer = setInterval(musicTick, 25);
+  }
+  function musicStop() {
+    clearInterval(musicTimer); musicTimer = 0;
+    if (musicGain) { try { musicGain.disconnect(); } catch (_) {} musicGain = null; }
+  }
+  function musicFade(sec) {                   // 부딪힌 슬로모션: 음악이 잦아들며 꺼진다
+    if (!musicGain || !audio) return;
+    try { musicGain.gain.setValueAtTime(1, audio.currentTime); musicGain.gain.linearRampToValueAtTime(0, audio.currentTime + sec); } catch (_) {}
+    clearInterval(musicTimer); musicTimer = 0;
+    const g = musicGain; musicGain = null;
+    setTimeout(() => { try { g.disconnect(); } catch (_) {} }, sec * 1000 + 300);
+  }
+  function soundUI() {
+    const b = $('soundBtn');
+    b.setAttribute('aria-pressed', String(soundOn));
+    b.setAttribute('aria-label', soundOn ? '소리 끄기' : '소리 켜기');
+  }
+  function setSound(on) {
+    soundOn = on;
+    try { localStorage.setItem('egg-jump-sound', on ? 'on' : 'off'); } catch (_) {}
+    soundUI();
+    if (on) { ensureAudio(); if (master) master.gain.value = 1; if (state === 'playing') musicStart(); }
+    else { if (master) master.gain.value = 0; musicStop(); }
+  }
+
+  // ---------- 도트 그리기 ----------
+  function pix(map, pal, px, outline) {
+    const h = map.length, w = map[0].length, o = outline ? 1 : 0;
+    const on = (x, y) => y >= 0 && y < h && x >= 0 && x < w && map[y][x] !== '.';
+    const rect = (x, y, f) => `<rect x="${x}" y="${y}" width="1" height="1" fill="${f}"/>`;
+    let r = '';
+    if (outline) {
+      for (let y = -1; y <= h; y++) for (let x = -1; x <= w; x++) {
+        if (!on(x, y) && (on(x - 1, y) || on(x + 1, y) || on(x, y - 1) || on(x, y + 1))) r += rect(x + o, y + o, outline);
+      }
+    }
+    map.forEach((row, y) => [...row].forEach((c, x) => { if (pal[c]) r += rect(x + o, y + o, pal[c]); }));
+    const W = w + 2 * o, H = h + 2 * o;
+    return `<svg viewBox="0 0 ${W} ${H}" width="${W * px}" height="${H * px}" shape-rendering="crispEdges" aria-hidden="true">${r}</svg>`;
+  }
+  // 소리 버튼 아이콘: 켜짐 = 스피커 + 물결, 꺼짐 = 스피커 + X
+  const SPEAKER_ON = ['...k......', '..kk...w..', 'kkkk.w..w.', 'kkkk.w..w.', 'kkkk.w..w.', '..kk...w..', '...k......'];
+  const SPEAKER_OFF = ['...k......', '..kk.x..x.', 'kkkk..xx..', 'kkkk..xx..', 'kkkk.x..x.', '..kk......', '...k......'];
+  const SPEAKER_COLORS = { k: '#f1f2f7', w: '#9ee8ff', x: '#ff5a6e' };
+  const BACK_ARROW = ['...o', '..oo', '.ooo', 'oooo', '.ooo', '..oo', '...o'];
+  const ARROW = ['o...', 'oo..', 'ooo.', 'oooo', 'ooo.', 'oo..', 'o...'];
+  document.querySelector('[data-back]').innerHTML = pix(BACK_ARROW, { o: '#1d2236' }, 2);
+
+  // ---------- 스프라이트 (index.html과 같은 도트 설계도) ----------
+  const EGG = [
+    '...wwww...',
+    '..wwwwww..',
+    '.wwwwwwws.',
+    '.wwwwwwws.',
+    'wwwwwwwwws',
+    'wwewwwwews',
+    'wbwwmmwwbs',
+    'wwwwwwwwss',
+    'wwwwwwwwss',
+    '.wwwwwwss.',
+    '..wwwsss..',
+    '...ssss...',
+  ];
+  const EGG_COLORS = { w: '#f3efe4', s: '#c9c0aa', e: '#151515', m: '#151515', b: '#e07a6f' };
+  const KIMBAP = [
+    '..kkkkk..',
+    '.kwwwwwk.',
+    'kwwygwwwk',
+    'kwppppywk',
+    'kwppppgwk',
+    'kwwgyywwk',
+    'kwwwwwwwk',
+    '.kwwwwwk.',
+    '..kkkkk..',
+  ];
+  const KIMBAP_COLORS = { k: '#3a4a33', w: '#ffffff', p: '#ff8fa3', y: '#ffd84a', g: '#5fb35a' };
+  const NUGGET = [
+    '....oooo....',
+    '...orhrro...',
+    '..oorrsroo..',
+    '.orhroorhro.',
+    '.orrsoorrso.',
+    '.orrroorrro.',
+    '..oooooooo..',
+  ];
+  const NUGGET_COLORS = { o: '#5a2410', r: '#c4471f', h: '#f08a4b', s: '#fff6e0' };
+  // 날아오는 떡꼬치: 꼬챙이(t)에 빨간 양념 떡 셋(r, R 윤기)
+  const SKEWER = [
+    '..rrr.rrr.rrr...',
+    '..rRr.rRr.rRr...',
+    'tttrrrrrrrrrrttt',
+    '..rrr.rrr.rrr...',
+    '..rrr.rrr.rrr...',
+  ];
+  const SKEWER_COLORS = { r: '#e8553c', R: '#ffb08f', t: '#c8a06a' };
+  // 모으는 깃털: 누가 봐도 깃털인 전형적인 모양 (사용자 요청 2026-10-21)
+  // 길쭉한 잎 모양 깃(폭은 좁고 길이는 길게, 둥글넓적하면 닭다리처럼 보여서 피함). 깃대(q)는 왼쪽 아래에서 올라가다 위에서 살짝 더 서는 휜 모양,
+  // 아래쪽 끝은 깃 없이 맨 깃대 + 솜털(f), 위쪽 끝은 짧게 둥글다.
+  // 깃대 위쪽 깃은 흰색(w) + 바깥 가장자리 옅은 그늘(l), 아래쪽 깃은 회청색 그늘(g · 바깥 d)이라 입체로 보인다.
+  // 양쪽 깃에 한 군데씩 갈라진 홈(.)이 있어 깃털 결이 읽힌다
+  const FEATHER = [
+    '........ww..',
+    '.......wwqg.',
+    '......lwqgg.',
+    '.....lwwqgd.',
+    '....l.wqggd.',
+    '...lwwqggd..',
+    '..lwwqggd...',
+    '..lwqg.d....',
+    '..wqgd......',
+    '.fqf........',
+    'fq..........',
+    'q...........',
+  ];
+  const FEATHER_COLORS = { w: '#ffffff', l: '#dbe4ee', g: '#b4c1d3', d: '#8597b2', f: '#eef3f8', q: '#7a6956' };
+  // 부딪힐 때 터지는 타격 별
+  const BURST = ['.....y.....', '.y...y...y.', '..y..y..y..', '...ywwwy...', 'yyyywwwyyyy', '...ywwwy...', '..y..y..y..', '.y...y...y.', '.....y.....'];
+  const BURST_COLORS = { y: '#ffcf3f', w: '#ffffff' };
+
+  function sprite(map, pal, outline) {
+    const o = outline ? 1 : 0, h = map.length, w = map[0].length;
+    const c = document.createElement('canvas');
+    c.width = w + 2 * o; c.height = h + 2 * o;
+    const g = c.getContext('2d');
+    const on = (x, y) => y >= 0 && y < h && x >= 0 && x < w && map[y][x] !== '.';
+    if (outline) {
+      g.fillStyle = outline;
+      for (let y = -1; y <= h; y++) for (let x = -1; x <= w; x++) {
+        if (!on(x, y) && (on(x - 1, y) || on(x + 1, y) || on(x, y - 1) || on(x, y + 1))) g.fillRect(x + o, y + o, 1, 1);
+      }
+    }
+    map.forEach((row, y) => [...row].forEach((ch, x) => { if (pal[ch]) { g.fillStyle = pal[ch]; g.fillRect(x + o, y + o, 1, 1); } }));
+    return c;
+  }
+  const SPR = {
+    egg: sprite(EGG, EGG_COLORS, '#1d2236'),
+    kimbap: sprite(KIMBAP, KIMBAP_COLORS),
+    nugget: sprite(NUGGET, NUGGET_COLORS),
+    skewer: sprite(SKEWER, SKEWER_COLORS, '#1d2236'),
+    feather: sprite(FEATHER, FEATHER_COLORS, '#1d2236'),
+    burst: sprite(BURST, BURST_COLORS, '#1d2236'),
+  };
+  // 테두리 표시: 닿으면 안 되는 장애물은 얇은 빨간 줄, 먹어야 하는 깃털은 얇은 초록 줄 (화면 1px)
+  const EDGE_BAD = '#ff4d5e', EDGE_GOOD = '#3ddc84';
+  const tinted = new Map();
+  function tint(img, color) {   // 스프라이트 모양 그대로 한 색으로 칠한 사본 (한 번 만들어 두고 다시 씀)
+    const key = img, cache = tinted.get(key) || {};
+    if (!cache[color]) {
+      const c = document.createElement('canvas');
+      c.width = img.width; c.height = img.height;
+      const g = c.getContext('2d');
+      g.drawImage(img, 0, 0);
+      g.globalCompositeOperation = 'source-in';
+      g.fillStyle = color; g.fillRect(0, 0, c.width, c.height);
+      cache[color] = c; tinted.set(key, cache);
+    }
+    return cache[color];
+  }
+  // ---------- 달걀 샤샤샥 (사용자 요청, 크레이지 아케이드 잔상) ----------
+  // 속도에 비례해 4단계: 4단계(속도)부터 1 · 8단계부터 2 · 12단계부터 3 · 무지개 달걀(16단계 이상) 4. 잔상은 2 → 5개, 간격·진하기도 커진다
+  const dashTier = () => stage >= RAINBOW_STAGE ? 4 : stage >= 11 ? 3 : stage >= 7 ? 2 : stage >= 3 ? 1 : 0;
+  const DASH_COLORS = ['#9ee8ff', '#5cc8f5', '#5cc8f5', '#9ee8ff'];
+  const RAINBOW6 = ['#ff5a6e', '#ffb03f', '#ffe14d', '#7be36b', '#5cc8f5', '#a77bff'];   // 무지개 달걀 잔상은 무지개 (색 6개를 돌려 씀 → 실루엣 캐시가 늘지 않게)
+  let eggHist = [];                                 // 지난 프레임들의 달걀 높이 (잔상이 점프 궤적을 따라가게)
+  function drawDash() {
+    const tier = dashTier();
+    if (!tier || state !== 'playing') return;
+    const n = tier + 1, gap = 6 + tier * 2, every = 2;
+    for (let k = n; k >= 1; k--) {                 // 먼 잔상부터 그려서 가까운 것이 위에
+      const h = eggHist[Math.min(eggHist.length - 1, k * every)];
+      if (!h) continue;
+      const col = tier === 4 ? RAINBOW6[(k + Math.floor(clock * 12)) % 6] : DASH_COLORS[tier - 1];
+      ctx.globalAlpha = (0.22 + tier * 0.07) * (1 - (k - 1) / (n + 1));
+      ctx.drawImage(tint(SPR.egg, col), Math.round(egg.x - k * gap), Math.round(h.y), h.w, h.h);
+    }
+    // 3단계부터: 달걀 뒤로 짧은 바람 줄 (깜빡이며 흐름)
+    if (tier >= 3) {
+      ctx.fillStyle = tier === 4 ? RAINBOW6[Math.floor(clock * 12) % 6] : '#ffffff';
+      for (let i = 0; i < tier; i++) {
+        const y = Math.round(egg.y + 6 + ((i * 13 + Math.floor(clock * 20) * 5) % Math.max(8, egg.h - 10)));
+        const len = 10 + ((i * 7 + Math.floor(clock * 30)) % 12);
+        ctx.globalAlpha = 0.55;
+        ctx.fillRect(Math.round(egg.x - n * gap - len - 4), y, len, 2);
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawEdged(img, color, x, y, w, h) {   // 상하좌우 1px씩 비켜 실루엣을 깔고 그 위에 원래 그림
+    const t = tint(img, color);
+    [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(([dx, dy]) => ctx.drawImage(t, x + dx, y + dy, w, h));
+    ctx.drawImage(img, x, y, w, h);
+  }
+
+  // ==================== 달걀 점프 ====================
+  const cv = $('game');
+  const ctx = cv.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  const W = cv.width, H = cv.height, GROUND = 168, S = 3;
+  const FW = 14 * 2, FH = 14 * 2;   // 깃털 그림 크기 (12×12칸 + 외곽선, 한 칸 2px → 28×28px. 깃털로 알아보게 칸을 늘림)
+  const FEATHER_PAD = 5;           // 깃털이 작아져서 줍는 판정은 둘레로 5px 넉넉하게   // S: 도트 한 칸 = 3px. 높이 232 = 원래 200 + 땅 높이 32 (늘어난 땅에 깃털 스티커)
+  const scoreEl = $('score'), bestEl = $('best');
+  const overlay = $('overlay'), ovTitle = $('ovTitle'), ovText = $('ovText');
+
+  // ---------- 숫자 (조절하기 쉽게 한곳에) ----------
+  const GRAVITY = 1600, JUMP_V = -560;     // 길게 누르면 지금과 같은 최대 높이(약 98px)
+  const CUT = 0.5;                         // 일찍 떼면 올라가는 속도를 절반으로 → 낮게
+  const BUFFER = 0.12, COYOTE = 0.08;      // 착지 직전 선입력, 땅을 벗어난 직후 봐주기 (초)
+  const FAST_FALL = 2600;                  // 공중에서 ↓ 누르면 더 세게 떨어진다
+  const STAND = { w: 12 * S, h: 14 * S }, DUCK = { w: 14 * S, h: 7 * S };   // 서 있을 때 / 숙였을 때 크기 (맵은 그대로, 그리는 크기만)
+  const SPEED0 = 210, SPEED_STEP = 24.5, STAGE_M = 100, STAGE_MAX = 24;   // 100m마다 속도 한 단계(+24.5), 최대 24단계
+  const SPEED_TOP = 770;          // 최고 속도: 577.5(16단계)의 4/3 (사용자 요청). 마지막 24단계만 770에 맞춰 덜 오른다
+  const RAINBOW_STAGE = 15;       // 무지개 달걀이 되는 단계 (0부터 세서 15 = 16단계, 속도 577.5). 버티기·무지개 효과의 기준
+  const NEAR = 6;                          // 이만큼(px) 안으로 스쳐 지나가면 '아슬아슬'
+  const SLOWMO = 0.125, END_SLOW = 1;      // 부딪히면 1초 동안 1/8 속도 (벽돌 깨기와 같은 값)
+  const SHIELD_DROP = 10, INVULN = 2;      // 무지개 달걀(16단계 이상)에서 부딪히면 한 번 버티고 10단계 느려짐 (16 → 6단계, 3 → 8 → 10, 사용자 요청), 2초 무적 (1초 → 2초, 사용자 요청)
+
+  let best = store.get('egg-jump-best');
+  bestEl.textContent = `최고 ${best}m`;
+
+  const egg = { x: 56, y: 0, vy: 0, w: STAND.w, h: STAND.h };
+  // state: ready(시작 전) → playing → ending(부딪힌 뒤 슬로모션) → over(결과판)
+  let state = 'ready', obstacles = [], feathers = [], bits = [], flung = [], speed, dist, spawnIn, last = 0, clock = 0;
+  let stage = 0, nextStageAt = STAGE_M, invulnT = 0, featherCount = 0, featherTotal = 0, nearCount = 0, recordShown = false, endT = 0, hitAt = null;
+  let jumpHeld = false, duckHeld = false, bufferT = 0, airT = 0, cut = false, landT = 0, wasGround = true, groupId = 0;
+  const groups = {};
+
+  function reset() {
+    egg.w = STAND.w; egg.h = STAND.h;
+    egg.y = GROUND - egg.h; egg.vy = 0;
+    obstacles = []; feathers = []; bits = [];
+    speed = SPEED0; dist = 0; spawnIn = 0.9; stage = 0; nextStageAt = STAGE_M; invulnT = 0;
+    featherCount = 0; featherTotal = 0; nearCount = 0; recordShown = false; hitAt = null; flung = []; peels = []; wobbleT = 0;
+    drawFeatherBar();
+    eggHist = [];
+    bufferT = 0; airT = 0; landT = 0; cut = false; wasGround = true;
+    drawGauge();
+  }
+  const onGround = () => egg.y >= GROUND - egg.h - 0.5;
+
+  // ---------- 입력: 누름/뗌을 한곳에서 (키보드·화면·버튼 모두) ----------
+  function pressJump() {
+    if (state === 'ending') return;                        // 슬로모션 중엔 입력 안 받음
+    if (state === 'ready' || state === 'over') { start(); return; }
+    jumpHeld = true;
+    bufferT = BUFFER;                                      // 착지 직전에 눌러도 착지하자마자 뛴다
+  }
+  function releaseJump() {
+    jumpHeld = false;
+    if (state === 'playing' && egg.vy < 0 && !cut) { egg.vy *= CUT; cut = true; }   // 일찍 떼면 낮게
+  }
+  function setDuck(on) {
+    if (on && !duckHeld && state === 'playing' && onGround()) sfx('duck');
+    duckHeld = on;
+    $('duckBtn').classList.toggle('held', on);
+  }
+
+  function start() {
+    ensureAudio();
+    reset();
+    state = 'playing';
+    sfx('start'); musicStart();
+    overlay.hidden = true;
+    $('endPanel').hidden = true;
+  }
+
+  // 다른 탭·앱으로 가면 하던 판은 접고 처음 화면으로
+  function pauseJump() {
+    if (state !== 'playing') return;
+    musicStop();
+    state = 'ready'; reset();
+    ovTitle.textContent = '달걀 점프';
+    ovText.textContent = '스페이스바 · 화면 터치로 시작';
+    overlay.hidden = false;
+  }
+
+  // ---------- 장애물 패턴 ----------
+  // 단계가 오를수록 어려운 패턴이 섞인다. 모든 장애물은 { x, y(위쪽), w, h, img, g(묶음 번호) }
+  function ground(kind, x, g, lift = 0) {
+    const img = SPR[kind];
+    const w = img.width * S, h = img.height * S;
+    obstacles.push({ x, y: GROUND - h - lift, w, h, img, g });
+    return w;
+  }
+  function flier(x, g, high) {
+    const img = SPR.skewer, w = img.width * S, h = img.height * S;
+    // 낮은 떡꼬치: 머리 높이(숙이거나 높이 뛰어 피함) / 높은 떡꼬치: 서 있으면 머리 위로 지나감(뛰면 부딪힘)
+    const bottom = high ? GROUND - 56 : GROUND - 28;   // 숙이면 낮은 떡꼬치와 7px 틈, 서 있으면 높은 떡꼬치와 14px 틈
+    obstacles.push({ x, y: bottom - h, w, h, img, g, fly: true });
+    return w;
+  }
+  function spawn() {
+    const g = ++groupId;
+    groups[g] = { min: Infinity, done: false };
+    const x0 = W + 10;
+    const pool = ['kimbap', 'nugget'];
+    if (stage >= 1) pool.push('stack', 'low', 'double');
+    if (stage >= 2) pool.push('high', 'triple');
+    if (stage >= 3) pool.push('combo');
+    const pat = pool[Math.floor(Math.random() * pool.length)];
+    let len = 0;
+    if (pat === 'kimbap' || pat === 'nugget') len = ground(pat, x0, g);
+    if (pat === 'stack') { ground('kimbap', x0, g); len = ground('kimbap', x0, g, SPR.kimbap.height * S); }   // 2단 김밥: 길게 눌러야 넘는다
+    if (pat === 'double' || pat === 'triple') {                // 닭강정 연달아: 짧게 여러 번
+      const n = pat === 'double' ? 2 : 3, step = Math.max(140, speed * 0.55);   // 간격을 속도에 비례시켜, 짧은 점프(약 0.42초)로 사이에 내려앉을 틈이 늘 남게
+      for (let i = 0; i < n; i++) len = i * step + ground('nugget', x0 + i * step, g);
+    }
+    if (pat === 'low') len = flier(x0, g, false);
+    if (pat === 'high') len = flier(x0, g, true);
+    if (pat === 'combo') { const off = Math.max(230, speed * 0.75); ground('kimbap', x0, g); len = off + flier(x0 + off, g, false); }   // 김밥 넘고 바로 떡꼬치 (빠를수록 사이를 넓혀 착지 후 숙일 틈을 남김)
+    // 깃털: 40% 확률로 점프해야 닿는 높이에 (장애물 위나 사이)
+    if (Math.random() < 0.4) feathers.push({ x: x0 + len / 2 - FW / 2 + (Math.random() < .5 ? 0 : len / 2 + 60), y: GROUND - 92 - Math.random() * 14 });
+    // 다음 패턴까지: 최소 230px, 빠르면 0.7초 거리(길게 뛴 점프가 내려앉고 다시 뛸 틈)까지 넓힌다
+    const gapPx = Math.max(230, speed * 0.7) + Math.random() * 190;
+    spawnIn = (len + gapPx) / speed;
+  }
+
+  // 부딪힘 판정 (살짝 봐주기 6px)
+  function overlapX(o, pad) { return egg.x + pad < o.x + o.w - pad && egg.x + egg.w - pad > o.x + pad; }
+  function hit(o) {
+    const pad = 6;
+    return overlapX(o, pad) && egg.y + pad < o.y + o.h - pad && egg.y + egg.h - pad > o.y + pad;
+  }
+
+  // 휴대폰 진동 (사용자 요청): 버티면 짧게 '툭', 게임이 끝나면 '쿵-쿵' 두 번. 진동이 없는 기기(아이폰 사파리·컴퓨터)는 조용히 건너뛴다
+  const BUZZ_SHIELD = 60, BUZZ_CRASH = [140, 70, 220];   // ms (끝: 140 울림 · 70 쉼 · 220 울림 = 0.43초)
+  function buzz(pattern) { try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (_) {} }
+
+  function crash(o) {
+    sfx('crash'); musicFade(0.6); buzz(BUZZ_CRASH);
+    loseFeathers();
+    state = 'ending';
+    endT = END_SLOW;
+    hitAt = { x: Math.max(o.x, egg.x + egg.w / 2), y: Math.max(o.y, egg.y) + 6, t: 0 };
+    for (let i = 0; i < 10; i++) bits.push({ x: hitAt.x, y: hitAt.y, vx: (Math.random() - .5) * 260, vy: -Math.random() * 220, t: .6, c: i % 2 ? '#ffcf3f' : '#f3efe4' });
+    const cab = document.querySelector('.cabinet');
+    cab.classList.remove('rumble'); void cab.offsetWidth; cab.classList.add('rumble');
+  }
+
+  // 생존 조건 (사용자 요청): 무지개 달걀(16단계 이상)이고, 부딪혀서 잃게 될 깃털(가진 것의 절반, 내림)이 5개 이상 = 깃털 10개 이상
+  const SURVIVE_PAY = 5;
+  const canSurvive = () => stage >= RAINBOW_STAGE && Math.floor(featherCount / 2) >= SURVIVE_PAY;
+
+  // 무지개 달걀에서 부딪힘: 장애물 묶음은 부서져 사라지고, 속도 10단계 낮아지고, 2초 깜빡이며 무적
+  function shieldHit(o, m) {
+    sfx('shield'); buzz(BUZZ_SHIELD);
+    loseFeathers();
+    hitAt = { x: Math.max(o.x, egg.x + egg.w / 2), y: Math.max(o.y, egg.y) + 6, t: 0 };
+    obstacles.filter(k => k.g === o.g).forEach(k => {
+      for (let i = 0; i < 6; i++) bits.push({ x: k.x + k.w / 2, y: k.y + k.h / 2, vx: (Math.random() - .3) * 260, vy: -Math.random() * 220, t: .5, c: i % 2 ? '#ff4d5e' : '#ffcf3f' });
+    });
+    obstacles = obstacles.filter(k => k.g !== o.g);
+    if (groups[o.g]) groups[o.g].done = true;          // 부순 묶음은 아슬아슬로 세지 않음
+    stage = Math.max(0, stage - SHIELD_DROP);
+    nextStageAt = m + STAGE_M;
+    drawGauge();
+    invulnT = INVULN;
+    boardFloat('버텼다! 속도 DOWN', W / 2, 70, 'speed');
+    const cab = document.querySelector('.cabinet');
+    cab.classList.remove('rumble'); void cab.offsetWidth; cab.classList.add('rumble');
+  }
+
+  // ---------- 모은 깃털: 늘어난 땅 속에 스티커가 하나씩 오른쪽으로 붙고, 부딪히면 소닉 동전처럼 흩뿌리며 절반(올림) 잃기 ----------
+  // 아이콘은 게임 속 깃털 그림(SPR.feather) + 얇은 초록 테두리를 그대로 쓴다 (따로 스티커 그림을 만들지 않음, 사용자 요청)
+  const ST_W = SPR.feather.width * 2, ST_H = SPR.feather.height * 2, ST_STEP = 26, ST_Y = H - 15;   // 땅 속 아이콘도 게임 속과 같은 28px, 간격 26px, 땅 맨 아래에 바짝
+  const WOBBLE = 0.5;               // 새 아이콘이 붙을 때 좌우로 살랑이는 시간 (초)
+  // 아이콘은 'N개' 글자 바로 오른쪽부터 붙는다. 글자는 HTML이라 화면 크기에 따라 캔버스 속 폭이 달라서, 실제 위치를 재서 맞춘다
+  let ST_X0 = 76, MAX_STICKERS = 15;
+  function layoutBar() {
+    const r = cv.getBoundingClientRect(), l = $('featherLabel').getBoundingClientRect();
+    if (!r.width) return;
+    ST_X0 = Math.ceil((l.right - r.left) * W / r.width) + 6;
+    MAX_STICKERS = Math.max(1, Math.floor((W - ST_X0 - 46) / ST_STEP));   // 넘치면 오른쪽에 +N
+  }
+  addEventListener('resize', () => { layoutBar(); drawFeatherBar(); });
+  let peels = [], wobbleT = 0;
+  const stickerX = (i) => ST_X0 + i * ST_STEP + ST_W / 2;
+  function drawFeatherBar() {   // 글자 부분(깃털 / +N)만 갱신. 스티커는 draw()에서 그린다
+    $('featherLabel').textContent = `깃털 ${featherCount}개`;
+    layoutBar();
+    $('featherMore').hidden = featherCount <= MAX_STICKERS;
+    $('featherMore').textContent = `+${featherCount - MAX_STICKERS}`;
+  }
+  function addSticker() { wobbleT = WOBBLE; drawFeatherBar(); }   // 커졌다 작아지는 효과 대신 좌우로 살랑이며 붙는다 (사용자 요청)
+  function drawStickers() {
+    const n = Math.min(featherCount, MAX_STICKERS);
+    for (let i = 0; i < n; i++) {
+      let rot = 0, dx = 0;
+      if (i === n - 1 && wobbleT > 0) {                  // 막 붙은 아이콘: 좌우로 흔들리다 점점 잦아든다
+        const k = wobbleT / WOBBLE, ph = (WOBBLE - wobbleT) * 34;
+        rot = Math.sin(ph) * 0.35 * k; dx = Math.sin(ph) * 3 * k;
+      }
+      drawSticker(stickerX(i) + dx, ST_Y, rot, 1, 1);
+    }
+    peels.forEach(p => drawSticker(p.x + (0.4 - p.t) * 30, ST_Y - (0.4 - p.t) * 40, p.r + (0.4 - p.t) * 3, 1 - (0.4 - p.t), p.t / 0.4));   // 떨어져 나가는 스티커
+  }
+  function drawSticker(cx, cy, rot, k, alpha) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(Math.round(cx), Math.round(cy));
+    ctx.rotate(rot);
+    ctx.scale(k, k);
+    drawEdged(SPR.feather, EDGE_GOOD, -ST_W / 2, -ST_H / 2, ST_W, ST_H);   // 게임 속 깃털 아이콘 그대로
+    ctx.restore();
+  }
+  function loseFeathers() {
+    if (featherCount < 2) return;                   // 잃을 게 없으면(0~1개) 그대로
+    const lost = Math.floor(featherCount / 2);      // 절반을 내려서: 5개면 2개, 1개면 0개 (사용자 요청)
+    featherCount -= lost;
+    // 흩뿌리기: 달걀 가운데에서 위쪽 부채꼴로 튀어 나가 바닥에서 통통 튀다가 깜빡이며 사라진다 (다시 못 주움)
+    const cx = egg.x + egg.w / 2 - FW / 2, cy = egg.y + egg.h / 2 - 10;
+    for (let i = 0; i < lost; i++) {
+      const a = (-160 + (lost === 1 ? 70 : (140 * i) / (lost - 1)) + (Math.random() * 12 - 6)) * Math.PI / 180;
+      const v = 170 + Math.random() * 90;
+      flung.push({ x: cx, y: cy, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: 1.3 });
+    }
+    boardFloat(`깃털 -${lost}`, egg.x + egg.w / 2, egg.y - 14, 'feather');
+    sfx('lose', lost);
+    // 스티커는 오른쪽 끝부터 떨어져 나간다
+    const before = Math.min(featherCount + lost, MAX_STICKERS), after = Math.min(featherCount, MAX_STICKERS);
+    for (let i = after; i < before; i++) peels.push({ x: stickerX(i), r: i % 2 ? 0.1 : -0.14, t: 0.4 });
+    drawFeatherBar();
+  }
+  // 흩뿌린 깃털은 슬로모션과 상관없이 실제 시간으로 움직인다 (게임 끝 슬로모션에서도 시원하게 퍼지도록)
+  function updateFlung(dt) {
+    wobbleT = Math.max(0, wobbleT - dt);
+    peels = peels.filter(p => (p.t -= dt) > 0);
+    flung = flung.filter(f => (f.t -= dt) > 0);
+    flung.forEach(f => {
+      f.vy = Math.min(f.vy + 520 * dt, 70);           // 깃털이라 금방 느려져 천천히 내려온다
+      f.vx *= 1 - 1.6 * dt;
+      f.x += (f.vx + Math.sin(f.t * 9 + f.vy) * 40) * dt; f.y += f.vy * dt;   // 좌우로 하늘하늘
+      if (f.y + FH > GROUND) { f.y = GROUND - FH; f.vx *= 0.5; }               // 땅에 내려앉음
+      if (f.x < 0 || f.x > W - FW) f.vx *= -1;
+    });
+  }
+
+  function finish() {
+    state = 'over';
+    const m = Math.floor(dist / 10);
+    const record = m > best;
+    if (record) { best = m; store.set('egg-jump-best', best); }
+    bestEl.textContent = `최고 ${best}m`;
+    $('finalDist').textContent = m;
+    $('finalFeather').textContent = featherTotal;   // 결과판은 총 획득 개수 (사용자 요청)
+    $('finalNear').textContent = nearCount;
+    const line = $('endLine');
+    line.className = record ? 'record' : '';
+    line.textContent = record ? '신기록이에요!' : `최고 기록 ${best}m`;
+    $('endPanel').hidden = false;
+    $('againBtn').focus();
+    musicStop();
+    sfx(record ? 'win' : 'over');
+  }
+
+  // ---------- 캔버스 위 글자 ----------
+  function boardFloat(text, x, y, cls) {
+    const el = document.createElement('span');
+    el.className = `bfloat ${cls}`;
+    el.textContent = text;
+    el.style.left = `${x / W * 100}%`;
+    el.style.top = `${y / H * 100}%`;
+    el.setAttribute('aria-hidden', 'true');
+    $('screen').appendChild(el);
+    setTimeout(() => el.remove(), 900);
+  }
+
+  // ---------- 속도 단계 알약 ----------
+  const gaugeArrows = [...$('gauge').querySelectorAll('i')];
+  gaugeArrows.forEach((el, i) => { el.innerHTML = pix(ARROW, { o: i < 10 ? '#ffcf3f' : i < RAINBOW_STAGE ? '#ff9a3d' : RAINBOW6[(i - RAINBOW_STAGE) % 6] }, 2); });   // 24칸: 노랑 10 · 주황 5 · 무지개 달걀부터 무지개 9
+  function drawGauge() {
+    gaugeArrows.forEach((el, i) => el.classList.toggle('on', i <= stage));   // 1단계 = 1칸
+    $('gauge').classList.toggle('max', stage >= STAGE_MAX - 1);
+    $('gauge').setAttribute('aria-label', `속도 ${stage + 1}단계`);
+  }
+
+  // ---------- 매 프레임 계산 ----------
+  function update(dt) {
+    clock += dt;
+    bits = bits.filter(p => (p.t -= dt) > 0);
+    bits.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 700 * dt; });
+    if (hitAt) hitAt.t += dt;
+    if (state !== 'playing' && state !== 'ending') return;
+
+    // 속도 단계: 100m마다 한 단계
+    const m = Math.floor(dist / 10);
+    if (state === 'playing' && stage < STAGE_MAX - 1 && m >= nextStageAt) {
+      stage++; nextStageAt += STAGE_M; drawGauge();
+      const msg = stage >= STAGE_MAX - 1 ? '최고 속도!' : stage === RAINBOW_STAGE ? '무지개 달걀 변신!' : '빨라진다!';
+      boardFloat(msg, W / 2, 70, 'speed');
+      sfx(stage >= STAGE_MAX - 1 || stage === RAINBOW_STAGE ? 'max' : 'stage');
+    }
+    invulnT = Math.max(0, invulnT - dt);
+    if (state === 'playing') { eggHist.unshift({ y: egg.y, w: egg.w, h: egg.h }); if (eggHist.length > 16) eggHist.length = 16; }
+    speed = Math.min(SPEED_TOP, SPEED0 + stage * SPEED_STEP);
+    dist += speed * dt;
+
+    // 숙이기: 땅에서만 몸이 낮아진다 (바닥 기준으로 크기만 바꿈)
+    const ducking = duckHeld && onGround() && state === 'playing';
+    const want = ducking ? DUCK : STAND;
+    if (egg.w !== want.w) { const bottom = egg.y + egg.h; egg.w = want.w; egg.h = want.h; egg.y = bottom - egg.h; }
+
+    // 점프: 선입력(bufferT) + 코요테(airT)
+    const grounded = onGround();
+    airT = grounded ? 0 : airT + dt;
+    bufferT = Math.max(0, bufferT - dt);
+    if (bufferT > 0 && airT <= COYOTE && egg.vy >= 0 && state === 'playing') {
+      egg.vy = JUMP_V; cut = false; bufferT = 0; airT = COYOTE + 1;
+      sfx('jump');
+      if (duckHeld) setDuck(false);
+      if (!jumpHeld) { egg.vy *= CUT; cut = true; }           // 이미 뗀 짧은 탭이면 낮게
+    }
+    egg.vy += (duckHeld && !grounded ? FAST_FALL : GRAVITY) * dt;
+    egg.y = Math.min(GROUND - egg.h, egg.y + egg.vy * dt);
+    if (onGround()) egg.vy = 0;
+    // 착지: 0.1초 납작 + 흙먼지
+    const nowGround = onGround();
+    if (nowGround && !wasGround) {
+      landT = 0.1;
+      if (state === 'playing') sfx('land');
+      for (let i = 0; i < 4; i++) bits.push({ x: egg.x + egg.w / 2, y: GROUND, vx: (i < 2 ? -1 : 1) * (40 + Math.random() * 60), vy: -60 - Math.random() * 60, t: .3, c: '#a9aecb' });
+    }
+    wasGround = nowGround;
+    landT = Math.max(0, landT - dt);
+
+    // 장애물·깃털 이동
+    spawnIn -= dt;
+    if (spawnIn <= 0 && state === 'playing') spawn();
+    obstacles.forEach(o => { o.x -= speed * dt; });
+    feathers.forEach(s => { s.x -= speed * dt; });
+
+    if (state === 'playing') {
+      const crashed = invulnT > 0 ? null : obstacles.find(hit);   // 버틴 직후 1초는 무적
+      if (crashed) {
+        if (canSurvive()) shieldHit(crashed, m);                    // 무지개 달걀 + 깃털 절반이 5개 이상: 한 번 버팀
+        else { crash(crashed); return; }
+      }
+      // 아슬아슬: 가로로 겹치는 동안 위아래 틈이 가장 작았던 값을 묶음마다 기록
+      obstacles.forEach(o => {
+        if (overlapX(o, 6)) {
+          const gap = Math.max(o.y - (egg.y + egg.h), egg.y - (o.y + o.h));
+          groups[o.g].min = Math.min(groups[o.g].min, gap);
+        }
+      });
+      Object.keys(groups).forEach(id => {
+        const gr = groups[id];
+        if (gr.done) return;
+        const left = obstacles.filter(o => o.g === Number(id));
+        if (left.length && left.every(o => o.x + o.w < egg.x)) {
+          gr.done = true;
+          if (gr.min < NEAR) { nearCount++; boardFloat('아슬아슬!', egg.x + egg.w / 2, egg.y - 12, 'near'); sfx('near'); }
+        }
+      });
+      // 깃털 줍기
+      feathers = feathers.filter(s => {
+        const P = FEATHER_PAD, hitS = egg.x < s.x + FW + P && egg.x + egg.w > s.x - P && egg.y < s.y + FH + P && egg.y + egg.h > s.y - P;
+        if (hitS) {
+          featherCount++; featherTotal++;                // featherTotal: 잃은 것과 상관없이 이번 판에 먹은 총 개수 (결과판용)
+          addSticker();
+          sfx('feather');
+          boardFloat('+1 깃털', s.x + FW / 2, s.y - 6, 'feather');
+          for (let i = 0; i < 5; i++) bits.push({ x: s.x + FW / 2, y: s.y + 10, vx: (Math.random() - .5) * 160, vy: -Math.random() * 120, t: .35, c: i % 2 ? '#ffffff' : '#9ee8ff' });
+        }
+        return !hitS;
+      });
+      // 신기록 지점을 넘는 순간
+      if (best > 0 && !recordShown && m > best) { recordShown = true; boardFloat('신기록!', egg.x + 40, 60, 'record'); sfx('record'); }
+    }
+    obstacles = obstacles.filter(o => o.x + o.w > -10);
+    feathers = feathers.filter(s => s.x + 30 > -10);
+    Object.keys(groups).forEach(id => { if (groups[id].done && !obstacles.some(o => o.g === Number(id))) delete groups[id]; });
+    scoreEl.textContent = `${Math.floor(dist / 10)}m`;
+  }
+
+  // ---------- 배경: 거리에 따라 밤 → 새벽 → 낮 → 저녁 → 다시 밤 (600m 한 바퀴) ----------
+  const SKIES = [   // [위, 가운데, 아래] 색 띠
+    { at: 0,   c: ['#0d1020', '#151a36', '#1f2550'] },   // 밤
+    { at: 150, c: ['#2a2f6b', '#7a5a9e', '#f29e9e'] },   // 새벽
+    { at: 300, c: ['#4fb3ee', '#7fcdf5', '#c2e8fb'] },   // 낮
+    { at: 450, c: ['#3a2e6e', '#c0577a', '#ffb070'] },   // 저녁
+    { at: 600, c: ['#0d1020', '#151a36', '#1f2550'] },
+  ];
+  const hex = (h) => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+  const mix = (a, b, t) => { const x = hex(a), y = hex(b); return `rgb(${x.map((v, i) => Math.round(v + (y[i] - v) * t)).join(',')})`; };
+  function skyAt(m) {
+    const p = m % 600;
+    let i = 0; while (SKIES[i + 1].at <= p) i++;
+    const a = SKIES[i], b = SKIES[i + 1], t = (p - a.at) / (b.at - a.at);
+    return { c: a.c.map((col, k) => mix(col, b.c[k], t)), night: i === 0 ? 1 - t : i === 3 ? t : 0 };
+  }
+  // ---------- 바깥 배경: 게임 속 하늘을 어둡게 따라가기 ----------
+  const OUT_DARK = 0.78;
+  const OUT_WORLD = 0.75;                  // 바깥에 이어 그리는 산·건물은 게임 화면보다 조금 옅게 (게임기가 돋보이게)                   // 바깥은 하늘색에 방 색(#171a2e)을 78% 섞어 늘 어둡게
+  const darken = (rgb) => { const v = rgb.match(/\d+/g).map(Number), r = [23, 26, 46]; return `rgb(${v.map((x, i) => Math.round(x + (r[i] - x) * OUT_DARK)).join(',')})`; };
+  let outKey = '';
+  function updateOutside() {
+    const c = skyAt(dist / 10).c.map(darken), key = c.join();
+    if (key === outKey) return;              // 색이 바뀔 때만 건드린다
+    outKey = key;
+    const st = document.documentElement.style;
+    st.setProperty('--out-top', c[0]); st.setProperty('--out-mid', c[1]); st.setProperty('--out-bot', c[2]);
+  }
+  (function scatterFeathers() {            // 깃털 9개: 크기·옅기·속도를 조금씩 다르게
+    const url = `url(${SPR.feather.toDataURL()})`, box = $('outside');
+    box.style.setProperty('--feather', url);
+    for (let i = 0; i < 9; i++) {
+      const el = document.createElement('span'), far = i % 3 === 0;
+      el.className = 'drift';
+      el.style.cssText = `left:${(i * 11.3 + 4) % 96}%; --w:${far ? 15 : 22 + (i % 2) * 8}px; --o:${far ? 0.14 : 0.26};` +
+        `--d:${far ? 46 : 30 + (i % 4) * 4}s; --delay:${-i * 5.3}s; --dx:${i % 2 ? 60 : -60}px; --rest:${(i * 37 + 10) % 90}vh;`;
+      el.append(document.createElement('i'));
+      box.append(el);
+    }
+  })();
+
+  // 먼 산 (아주 느리게) → 가까운 건물 (조금 빠르게): 시차 스크롤.
+  // x0~x1은 게임 화면 좌표(0~W가 게임 화면). 바깥 배경은 화면 밖 좌표까지 그려서 게임 세계가 이어지게 한다. k = 진하기 배율
+  function drawSkyline(g, x0, x1, sky, k) {
+    const far = dist * 0.15, near = dist * 0.35;
+    g.globalAlpha = 0.55 * k;
+    g.fillStyle = sky.night > 0.5 ? '#151a36' : '#3a3f6b';
+    for (let x = Math.floor(x0 / 4) * 4; x < x1; x += 4) {
+      const wx = x + far;
+      const h = 34 + Math.sin(wx / 47) * 12 + Math.sin(wx / 19) * 5;
+      g.fillRect(x, Math.round(GROUND - h), 4, Math.round(h));
+    }
+    g.globalAlpha = 0.8 * k;
+    g.fillStyle = sky.night > 0.5 ? '#0f1330' : '#2a2f5a';
+    const BW = 28;
+    for (let b = Math.floor((x0 + near) / BW) - 1; b * BW - near < x1; b++) {
+      const hsh = Math.abs(Math.sin(b * 12.9898) * 43758.5453) % 1;   // 건물마다 정해진 높이
+      if (hsh < 0.25) continue;                                          // 빈 땅도 섞기
+      const bh = 14 + Math.round(hsh * 34), bx = Math.round(b * BW - near);
+      g.fillRect(bx, GROUND - bh, BW - 4, bh);
+      if (sky.night > 0.3) {                                             // 밤엔 창문 불빛
+        g.fillStyle = 'rgba(255,225,77,.7)';
+        for (let wy = GROUND - bh + 4; wy < GROUND - 6; wy += 8) if ((b + wy) % 3) g.fillRect(bx + 5, wy, 3, 3);
+        g.fillStyle = sky.night > 0.5 ? '#0f1330' : '#2a2f5a';
+      }
+    }
+    g.globalAlpha = 1;
+  }
+  // 바닥 무지개 점선 (게임 화면과 바깥 배경이 같은 칸 번호를 써서 끊김 없이 이어진다)
+  const ROAD_COLORS = ['#ff3b5c', '#ff9f1c', '#ffe14d', '#3ddc84', '#2ec4ff', '#7b5cff'];
+  function drawRoad(g, x0, x1) {
+    const off = dist % 24, shift = Math.floor(dist / 120);
+    for (let j = Math.floor((x0 + off) / 12) - 1; -off + j * 12 < x1; j++) {
+      g.fillStyle = ROAD_COLORS[(((j + shift) % 6) + 6) % 6];
+      g.fillRect(Math.round(-off + j * 12), GROUND + 2, 6, 3);
+    }
+  }
+
+  // ---------- 바깥 배경에 게임 세계 이어 그리기 (사용자 요청 2026-10-20) ----------
+  // 게임 화면이 실제로 보이는 크기·위치를 재서, 같은 배율로 화면 밖까지 산·건물·땅·무지개 길을 그린다.
+  // 그래서 게임기 양옆으로 지평선과 풍경이 같은 높이·같은 속도로 흘러가, 게임 화면이 바깥까지 늘어난 것처럼 보인다
+  const outCv = document.createElement('canvas'), outG = outCv.getContext('2d');
+  outCv.className = 'world';
+  $('outside').prepend(outCv);
+  function drawOutsideWorld() {
+    // 크기는 바깥 캔버스가 실제로 차지한 상자 기준 (innerWidth는 스크롤바·휴대폰 주소창 때문에 어긋날 수 있다)
+    const dpr = Math.min(2, window.devicePixelRatio || 1), box = outCv.getBoundingClientRect(), vw = box.width, vh = box.height;
+    if (outCv.width !== Math.round(vw * dpr) || outCv.height !== Math.round(vh * dpr)) { outCv.width = Math.round(vw * dpr); outCv.height = Math.round(vh * dpr); }
+    const g = cv.getBoundingClientRect(), r = { left: g.left - box.left, top: g.top - box.top, width: g.width };
+    outG.setTransform(1, 0, 0, 1, 0, 0);
+    outG.clearRect(0, 0, outCv.width, outCv.height);
+    if (!r.width) return;
+    const sc = r.width / W;                                          // 게임 한 칸이 화면에서 몇 px인지
+    outG.setTransform(sc * dpr, 0, 0, sc * dpr, r.left * dpr, r.top * dpr);
+    const x0 = -r.left / sc, x1 = (vw - r.left) / sc, yEnd = (vh - r.top) / sc;
+    drawSkyline(outG, x0, x1, skyAt(dist / 10), OUT_WORLD);
+    outG.globalAlpha = 0.9;                                          // 지평선 아래 땅
+    outG.fillStyle = '#0d1020';
+    outG.fillRect(x0, GROUND, x1 - x0, Math.max(0, yEnd - GROUND));
+    outG.globalAlpha = 0.55;
+    drawRoad(outG, x0, x1);
+    outG.globalAlpha = 1;
+  }
+
+  function drawBackground(t) {
+    const m = dist / 10, sky = skyAt(m);
+    // 색 띠 하늘 (도트 느낌으로 끊어서)
+    const bands = [[0, 60, sky.c[0]], [60, 110, sky.c[1]], [110, GROUND, sky.c[2]]];
+    bands.forEach(([y0, y1, col]) => { ctx.fillStyle = col; ctx.fillRect(0, y0, W, y1 - y0); });
+    // 별: 밤일수록 진하게
+    if (sky.night > 0.05) {
+      ctx.globalAlpha = sky.night;
+      for (let i = 0; i < 18; i++) {
+        const sx = (i * 97 + 13) % W, sy = (i * 53 + 7) % 100;
+        ctx.fillStyle = ((Math.floor(t / 400) + i) % 3 === 0) ? '#ffe14d' : '#3a3f6b';
+        ctx.fillRect(sx, sy, 3, 3);
+      }
+      ctx.globalAlpha = 1;
+    }
+    drawSkyline(ctx, 0, W, sky, 1);
+    // 빠른 단계에선 하늘에 가로 속도선 (장애물·달걀보다 뒤)
+    if (stage >= 3) {
+      const a = Math.min(1, (stage - 2) / 4);
+      const top = stage >= RAINBOW_STAGE;
+      if (top) {                                  // 무지개 달걀부터: 화면 가로로 흐르는 무지개 그라데이션 (사용자 요청)
+        const grad = ctx.createLinearGradient(0, 0, W, 0), base = (clock * 240) % 360;
+        for (let i = 0; i <= 6; i++) grad.addColorStop(i / 6, `hsl(${(base + i * 60) % 360}, 100%, 70%)`);
+        ctx.fillStyle = grad;
+      } else ctx.fillStyle = '#ffffff';
+      for (let i = 0; i < 14; i++) {
+        const len = 18 + (i * 7) % 26, y = 12 + (i * 37) % (GROUND - 30);
+        const x = W - ((clock * (300 + stage * 60) + i * 61) % (W + len));
+        ctx.globalAlpha = a * (0.15 + (i % 3) * 0.08) * (top ? 2.2 : 1);   // 무지개일 땐 더 또렷하게
+        ctx.fillRect(Math.round(x), y, len, i % 4 ? 1 : 2);
+      }
+      ctx.globalAlpha = 1;
+    }
+    // 바닥 아래 흙 (늘어난 땅): 짙은 바탕 + 아주 옅은 흙 알갱이
+    ctx.fillStyle = '#0d1020';
+    ctx.fillRect(0, GROUND, W, H - GROUND);
+    ctx.fillStyle = '#1a1f3d';
+    for (let i = 0; i < 26; i++) ctx.fillRect(Math.round(((i * 53 + 17) - dist * 0.5) % W + W) % W, GROUND + 12 + (i * 29) % (H - GROUND - 16), 3, 2);
+  }
+
+  function draw(t) {
+    updateOutside();
+    drawOutsideWorld();
+    drawBackground(t);
+    drawStickers();
+    // 바닥: 무지개 점선
+    drawRoad(ctx, 0, W);
+    // 최고 기록 깃발: 지난 최고 거리 지점에 꽂혀 있다가 지나간다
+    if (best > 0 && state !== 'ready') {
+      const fx = Math.round(egg.x + egg.w / 2 + (best * 10 - dist));
+      if (fx > -20 && fx < W + 20) {
+        ctx.fillStyle = '#f3efe4'; ctx.fillRect(fx, GROUND - 40, 2, 40);
+        ctx.fillStyle = '#c6f04a'; ctx.fillRect(fx + 2, GROUND - 40, 16, 10);
+        ctx.fillStyle = '#1d2236'; ctx.fillRect(fx + 2, GROUND - 31, 16, 1);
+      }
+    }
+    // 깃털 (위아래로 둥실)
+    feathers.forEach(s => drawEdged(SPR.feather, EDGE_GOOD, Math.round(s.x), Math.round(s.y + (Math.floor(clock * 4 + s.x / 50) % 2) * 2), FW, FH));
+    // 장애물 (떡꼬치 뒤엔 바람 줄 두 개)
+    obstacles.forEach(o => {
+      if (o.fly) { ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.fillRect(Math.round(o.x + o.w + 4), Math.round(o.y + 3), 10, 2); ctx.fillRect(Math.round(o.x + o.w + 8), Math.round(o.y + o.h - 5), 8, 2); }
+      drawEdged(o.img, EDGE_BAD, Math.round(o.x), Math.round(o.y), o.w, o.h);
+    });
+    // 달걀: 땅 위에선 콩콩, 착지 순간 납작, 숙이면 낮게 (맵은 그대로, 그리는 크기만)
+    let dw = egg.w, dh = egg.h;
+    if (landT > 0) { dw = Math.round(egg.w * 1.15); dh = Math.round(egg.h * 0.85); }
+    const bob = state === 'playing' && onGround() && landT <= 0 && egg.h === STAND.h && Math.floor(t / 120) % 2 ? -3 : 0;
+    const ex = Math.round(egg.x - (dw - egg.w) / 2), ey = Math.round(egg.y + egg.h - dh) + bob;
+    drawDash();                                   // 샤샤샥 잔상 (달걀 뒤)
+    if (invulnT > 0 && Math.floor(clock * 14) % 2) ctx.globalAlpha = 0.35;   // 버틴 뒤 무적 동안 깜빡
+    if (stage >= RAINBOW_STAGE && state !== 'ready') drawRainbowEgg(ex, ey, dw, dh);   // 16단계 이상: 무지개 달걀
+    else ctx.drawImage(SPR.egg, ex, ey, dw, dh);
+    ctx.globalAlpha = 1;
+    // 흩뿌린 깃털
+    flung.forEach(f => { if (f.t > 0.5 || Math.floor(f.t * 16) % 2) ctx.drawImage(SPR.feather, Math.round(f.x), Math.round(f.y), FW, FH); });
+    // 조각·먼지
+    bits.forEach(p => { ctx.fillStyle = p.c; ctx.fillRect(Math.round(p.x), Math.round(p.y), 3, 3); });
+    // 부딪힌 자리 타격 별
+    if (hitAt && hitAt.t < 0.5) {
+      const sz = Math.round(33 * (0.6 + Math.min(1, hitAt.t * 4) * 0.6));
+      ctx.globalAlpha = 1 - Math.max(0, hitAt.t - 0.25) * 4;
+      ctx.drawImage(SPR.burst, Math.round(hitAt.x - sz / 2), Math.round(hitAt.y - sz / 2), sz, sz);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  // ---------- 무지개 달걀 (16단계 이상) ----------
+  // 원래 짙은 외곽선은 그대로 두고, 그 바깥에 화면 1px짜리 얇은 무지개 줄 + 달걀 안쪽에 옅게 흐르는 무지개 그라데이션.
+  // 달걀 맵·팔레트는 건드리지 않고, 그린 그림 위에 색을 '덧입히기'만 한다
+  const rimCv = document.createElement('canvas'), tintCv = document.createElement('canvas');
+  const rimG = rimCv.getContext('2d'), tintG = tintCv.getContext('2d');
+  function rainbowFill(g, w, h, a) {   // 대각선으로 흐르는 무지개 (시간에 따라 색이 돈다)
+    const grad = g.createLinearGradient(0, 0, w, h);
+    const base = (clock * 160) % 360;
+    for (let i = 0; i <= 6; i++) grad.addColorStop(i / 6, `hsla(${(base + i * 60) % 360}, 100%, 62%, ${a})`);
+    g.fillStyle = grad; g.fillRect(0, 0, w, h);
+  }
+  function drawRainbowEgg(x, y, w, h) {
+    [rimCv, tintCv].forEach(c => { if (c.width !== w || c.height !== h) { c.width = w; c.height = h; } });
+    [rimG, tintG].forEach(g => { g.imageSmoothingEnabled = false; g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, w, h); g.drawImage(SPR.egg, 0, 0, w, h); });
+    rimG.globalCompositeOperation = 'source-in';     // 달걀 모양 그대로 무지개 단색 실루엣
+    rainbowFill(rimG, w, h, 1);
+    tintG.globalCompositeOperation = 'source-atop';  // 달걀 그림 위에만 옅게 덧칠
+    rainbowFill(tintG, w, h, 0.28);
+    [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(([dx, dy]) => ctx.drawImage(rimCv, x + dx, y + dy));   // 1px 무지개 테두리
+    ctx.drawImage(tintCv, x, y);
+  }
+
+  function loop(t) {
+    const dt = Math.min((t - last) / 1000, 0.05);
+    last = t;
+    updateFlung(dt);
+    if (state === 'ending') {                // 부딪힌 뒤 1초(실제 시간) 동안 1/8 속도로 계속 움직이다가 결과판
+      endT -= dt;
+      update(dt * SLOWMO);
+      if (endT <= 0) finish();
+    } else update(dt);
+    draw(t);
+    requestAnimationFrame(loop);
+  }
+  reset();
+
+  // ---------- 입력 연결 ----------
+  cv.addEventListener('pointerdown', (e) => { e.preventDefault(); cv.setPointerCapture?.(e.pointerId); pressJump(); });
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => cv.addEventListener(ev, releaseJump));
+  const jumpBtn = $('jumpBtn'), duckBtn = $('duckBtn');
+  jumpBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); jumpBtn.setPointerCapture?.(e.pointerId); jumpBtn.classList.add('held'); pressJump(); });
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => jumpBtn.addEventListener(ev, () => { jumpBtn.classList.remove('held'); releaseJump(); }));
+  jumpBtn.addEventListener('click', (e) => { if (e.detail === 0) { pressJump(); setTimeout(releaseJump, 180); } });   // 키보드로 버튼을 누르면 높게
+  duckBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); duckBtn.setPointerCapture?.(e.pointerId); setDuck(true); });
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => duckBtn.addEventListener(ev, () => setDuck(false)));
+  [jumpBtn, duckBtn, cv].forEach(el => el.addEventListener('contextmenu', (e) => e.preventDefault()));
+  $('againBtn').addEventListener('click', start);
+
+  document.addEventListener('visibilitychange', () => { if (document.hidden) { pauseJump(); jumpHeld = false; setDuck(false); } });
+  window.addEventListener('blur', () => { jumpHeld = false; setDuck(false); });
+  // 키보드: 스페이스바·↑ = 점프(누르는 동안 높이), ↓ = 숙이기
+  // 소리 버튼: 캔버스 점프로 넘어가지 않게 막고 켜기/끄기
+  const soundBtn = $('soundBtn');
+  soundBtn.innerHTML = `<span class="on-ic">${pix(SPEAKER_ON, SPEAKER_COLORS, 2, '#0d1020')}</span><span class="off-ic">${pix(SPEAKER_OFF, SPEAKER_COLORS, 2, '#0d1020')}</span>`;
+  soundBtn.addEventListener('pointerdown', (e) => e.stopPropagation());
+  soundBtn.addEventListener('click', () => setSound(!soundOn));
+  soundUI();                                // 처음엔 버튼 모양만 (소리는 누른 뒤에 깨운다)
+  document.addEventListener('pointerdown', ensureAudio, true);
+  document.addEventListener('keydown', (e) => {
+    ensureAudio();
+    if (e.code === 'KeyM' && !e.repeat) { setSound(!soundOn); return; }
+    const onControl = e.target instanceof Element && e.target.matches('a, button');
+    if (e.code === 'ArrowDown') { e.preventDefault(); setDuck(true); return; }
+    if (e.code !== 'Space' && e.code !== 'ArrowUp') return;
+    if (onControl && e.code === 'Space') return;           // 링크·버튼 위에서 스페이스는 원래 동작 (결과판 '다시 하기' 등)
+    e.preventDefault();
+    if (!e.repeat) pressJump();
+  });
+  document.addEventListener('keyup', (e) => {
+    if (e.code === 'ArrowDown') setDuck(false);
+    if (e.code === 'Space' || e.code === 'ArrowUp') releaseJump();
+  });
+  requestAnimationFrame((t) => { last = t; loop(t); });
+</script>
+</body>
+</html>

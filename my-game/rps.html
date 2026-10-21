@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>가위바위보 · 호성 오락실</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 12' shape-rendering='crispEdges'%3E%3Cpath fill='%23f3efe4' d='M3 0h4v1h1v1h1v2h1v5h-1v2h-2v1h-4v-1h-2v-2h-1v-5h1v-2h1v-1h1z'/%3E%3Cpath fill='%23151515' d='M2 5h1v1h-1zM7 5h1v1h-1zM4 6h2v1h-2z'/%3E%3Cpath fill='%23e07a6f' d='M1 6h1v1h-1zM8 6h1v1h-1z'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/galmuri.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/pretendard.css">
+<style>
+  :root {
+    --room: #171a2e;
+    --room-2: #22264a;
+    --ink: #1d2236;
+    --paper: #f1f2f7;
+    --dim: #a9aecb;
+    --screen: #0d1020;
+    --btn: #ffcf3f;
+    --btn-deep: #c99a12;
+    --ion-fizz: #9ee8ff;
+    --ion-lime: #c6f04a;     /* 이겼을 때·신기록 */
+    --warn: #ff5a6e;         /* 졌을 때만 잠깐 */
+    /* 게임기 몸통 색: 가위바위보는 밝은 얼음빛(.ice) */
+    --c: #e8f6ff;
+    --c-deep: #5cc8f5;
+    --c-ink: #06357a;
+    --pixel: "Galmuri11", monospace;
+    --sans: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    background-color: var(--room);
+    color: var(--paper);
+    font-family: var(--sans);
+    line-height: 1.7;
+    word-break: keep-all;
+    overflow-x: hidden;
+  }
+  ::selection { background: var(--c-deep); color: #fff; }
+  :focus-visible { outline: 2px dashed var(--btn); outline-offset: 4px; }
+  svg { display: block; }
+
+  .top { max-width: 960px; margin: 0 auto; padding: 24px 16px 0; }
+  .back {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 10px 16px;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--pixel);
+    font-size: 12px;
+    text-decoration: none;
+    box-shadow: 0 -2px 0 var(--ink), 0 2px 0 var(--ink), -2px 0 0 var(--ink), 2px 0 0 var(--ink),
+                0 6px 12px -4px rgba(0,0,0,.4);
+    transition: transform .08s;
+  }
+  .back:hover { background: var(--btn); }
+  .back:active { transform: translateY(3px); }
+
+  main { max-width: 960px; margin: 0 auto; padding: 32px 16px 64px; text-align: center; }
+  .sub { color: var(--dim); }
+
+  /* ---------- 게임기 ---------- */
+  .cabinet {
+    position: relative;
+    margin: 32px auto 0;
+    max-width: 640px;
+    background: var(--c);
+    padding: 24px 24px 28px;
+    border-radius: 24px 24px 12px 12px;
+    box-shadow: 0 30px 50px -20px rgba(0,0,0,.6);
+  }
+  /* 몸통에 붙은 탄산 방울 장식 */
+  .fizz { position: absolute; inset: 0; pointer-events: none; }
+  .fizz i {
+    position: absolute;
+    border: 2px solid var(--ion-fizz);
+    background: #fff;
+    animation: rise 2.4s steps(4, end) infinite;
+  }
+  @keyframes rise { 50% { transform: translateY(-4px); } }
+
+  .marquee {
+    position: relative;
+    display: inline-block;
+    padding: 12px 28px;
+    background: #fff;
+    font-family: var(--pixel);
+    font-weight: 400;
+    font-size: 36px;
+    line-height: 1.2;
+    color: var(--c-ink);
+    box-shadow: 0 -4px 0 var(--c-ink), 0 4px 0 var(--c-ink), -4px 0 0 var(--c-ink), 4px 0 0 var(--c-ink);
+    animation: bulbs 1.6s steps(1, end) infinite;
+  }
+  /* 테두리 전구가 노랑 ↔ 남색으로 천천히 깜빡임 */
+  @keyframes bulbs { 50% { box-shadow: 0 -4px 0 var(--btn), 0 4px 0 var(--btn), -4px 0 0 var(--btn), 4px 0 0 var(--btn); } }
+
+  /* ---------- 가위·바위·보 큰 버튼 ---------- */
+  .hands {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+    margin-top: 32px;
+  }
+  .hand {
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+    gap: 12px;
+    aspect-ratio: 1 / 1.08;
+    padding: 14px 8px 16px;
+    border: 0;
+    border-radius: 16px;
+    background: var(--btn);
+    box-shadow: inset 0 0 0 4px #ffdd6e, 0 8px 0 var(--btn-deep), 0 16px 14px -6px rgba(0,0,0,.3);
+    color: var(--c-ink);
+    font-family: var(--pixel);
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: transform .06s, box-shadow .06s;
+  }
+  .hand-art { flex: 1; display: grid; place-items: end center; width: 100%; }
+  .hand svg { width: 72px; height: auto; }
+  .hand:hover { filter: brightness(1.04); }
+  .hand:hover .hand-art { animation: wiggle .5s steps(2, end) infinite; }
+  @keyframes wiggle { 50% { transform: translateY(-3px); } }
+  .hand:active, .hand.hit {
+    transform: translateY(6px);
+    box-shadow: inset 0 0 0 4px #ffdd6e, 0 2px 0 var(--btn-deep), 0 6px 6px -3px rgba(0,0,0,.3);
+  }
+
+  /* 고른 손: 남색 테두리로 표시 */
+  .hand.picked { box-shadow: inset 0 0 0 4px var(--c-ink), 0 8px 0 var(--btn-deep), 0 16px 14px -6px rgba(0,0,0,.3); }
+  .hand:disabled { cursor: default; }
+  .hand:disabled:not(.picked) { filter: saturate(.55) brightness(.92); }
+  .keys { margin-top: 18px; font-family: var(--pixel); font-size: 12px; color: var(--c-ink); }
+
+  /* ---------- 결과 화면 ---------- */
+  .bezel { margin-top: 28px; background: var(--c-ink); padding: 12px; border-radius: 10px; }
+  .screen {
+    padding: 14px 16px 18px;
+    background: var(--screen);
+    border-radius: 4px;
+  }
+  .rhud { display: flex; justify-content: space-between; gap: 12px; font-family: var(--pixel); font-size: 12px; color: var(--dim); }
+  .rhud b { font-weight: 400; color: var(--paper); font-variant-numeric: tabular-nums; }
+  .rhud .best { color: var(--ion-lime); }
+  .arena {
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: end;
+    gap: 12px;
+    max-width: 380px;
+    margin: 14px auto 0;
+  }
+  .side { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .who { display: grid; place-items: end center; height: 44px; font-family: var(--pixel); font-size: 12px; color: var(--dim); }
+  .slot-hand {
+    display: grid; place-items: end center;
+    width: 92px; height: 92px;
+    padding-bottom: 8px;
+    border: 2px dashed var(--room-2);
+  }
+  .slot-hand.filled { border-color: transparent; }
+  .slot-hand .q { align-self: center; font-family: var(--pixel); font-size: 24px; color: var(--room-2); }
+  .slot-hand svg { width: 66px; height: auto; }
+  .flip svg { transform: scaleX(-1); }            /* 달걀 쪽 손은 마주 보게 뒤집기 */
+  .shake svg { animation: shake .3s steps(2, end) infinite; }
+  @keyframes shake { 50% { translate: 0 -8px; } }
+  .slot-hand.won svg { animation: cheer .45s steps(2, end) 3; }
+  @keyframes cheer { 50% { translate: 0 -10px; } }
+  .call { align-self: center; min-width: 4.5em; font-family: var(--pixel); font-size: 16px; color: var(--btn); }
+
+  .verdict { margin-top: 16px; min-height: 30px; font-family: var(--pixel); font-size: 24px; line-height: 1.25; }
+  .verdict.win { color: var(--ion-lime); }
+  .verdict.lose { color: var(--warn); }
+  .verdict.draw { color: var(--ion-fizz); }
+  .egg-line { margin-top: 6px; min-height: 18px; font-family: var(--pixel); font-size: 12px; color: var(--dim); }
+  .result-empty {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--pixel);
+    font-size: 12px;
+    color: var(--dim);
+  }
+  /* 깜빡이는 도트 커서 */
+  .result-empty::after {
+    content: "";
+    width: 8px; height: 14px;
+    background: var(--ion-fizz);
+    animation: cursor 1s steps(1, end) infinite;
+  }
+  @keyframes cursor { 50% { opacity: 0; } }
+
+  @media (max-width: 600px) {
+    .cabinet { padding: 18px 12px 22px; }
+    .marquee { font-size: 24px; padding: 10px 18px; }
+    .hands { gap: 10px; margin-top: 26px; }
+    .hand { font-size: 12px; gap: 10px; padding: 10px 6px 16px; border-radius: 12px; }
+    .hand svg { width: 56px; }
+    .bezel { padding: 8px; }
+    .screen { padding: 12px 10px 16px; }
+    .slot-hand { width: 76px; height: 76px; }
+    .slot-hand svg { width: 52px; }
+    .verdict { font-size: 16px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <a class="back" href="arcade.html"><span data-back></span>게임 목록</a>
+</header>
+
+<main>
+  <p class="sub">손 모양 하나를 골라 달걀과 승부해요. 몇 번 연속으로 이길 수 있을까요?</p>
+
+  <section class="cabinet" aria-label="가위바위보 게임기">
+    <div class="fizz" aria-hidden="true">
+      <i style="left:18px;top:30px;width:12px;height:12px"></i>
+      <i style="left:38px;top:58px;width:8px;height:8px;animation-delay:-.6s"></i>
+      <i style="right:22px;top:40px;width:10px;height:10px;animation-delay:-1.2s"></i>
+      <i style="right:44px;top:22px;width:6px;height:6px;animation-delay:-1.8s"></i>
+    </div>
+
+    <h1 class="marquee">가위바위보!</h1>
+
+    <div class="hands">
+      <button type="button" class="hand" data-hand="scissors" aria-label="가위"><span class="hand-art"></span>가위</button>
+      <button type="button" class="hand" data-hand="rock" aria-label="바위"><span class="hand-art"></span>바위</button>
+      <button type="button" class="hand" data-hand="paper" aria-label="보"><span class="hand-art"></span>보</button>
+    </div>
+    <p class="keys">키보드 1 · 2 · 3 으로도 낼 수 있어요</p>
+
+    <div class="bezel">
+      <div class="screen" id="result">
+        <div class="rhud">
+          <span>승 <b id="wins">0</b> · 무 <b id="draws">0</b> · 패 <b id="losses">0</b></span>
+          <span>연승 <b id="streak">0</b> · 최고 <b class="best" id="best">0</b></span>
+        </div>
+        <div class="arena">
+          <div class="side"><span class="who">나</span><span class="slot-hand" id="meHand"><span class="q">?</span></span></div>
+          <span class="call" id="call">VS</span>
+          <div class="side"><span class="who" id="eggFace" aria-label="달걀"></span><span class="slot-hand flip" id="eggHand"><span class="q">?</span></span></div>
+        </div>
+        <p class="verdict" id="verdict" aria-live="polite"><span class="result-empty">결과가 여기에 나와요</span></p>
+        <p class="egg-line" id="eggLine"></p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+  // ---------- 도트 그리기 (arcade.html·index.html과 같은 방식) ----------
+  function pix(map, pal, px, outline) {
+    const h = map.length, w = map[0].length, o = outline ? 1 : 0;
+    const on = (x, y) => y >= 0 && y < h && x >= 0 && x < w && map[y][x] !== '.';
+    const rect = (x, y, f) => `<rect x="${x}" y="${y}" width="1" height="1" fill="${f}"/>`;
+    let r = '';
+    if (outline) {
+      for (let y = -1; y <= h; y++) for (let x = -1; x <= w; x++) {
+        if (!on(x, y) && (on(x - 1, y) || on(x + 1, y) || on(x, y - 1) || on(x, y + 1))) r += rect(x + o, y + o, outline);
+      }
+    }
+    map.forEach((row, y) => [...row].forEach((c, x) => { if (pal[c]) r += rect(x + o, y + o, pal[c]); }));
+    const W = w + 2 * o, H = h + 2 * o;
+    return `<svg viewBox="0 0 ${W} ${H}" width="${W * px}" height="${H * px}" shape-rendering="crispEdges" aria-hidden="true">${r}</svg>`;
+  }
+  const BACK_ARROW = ['...o', '..oo', '.ooo', 'oooo', '.ooo', '..oo', '...o'];
+  document.querySelector('[data-back]').innerHTML = pix(BACK_ARROW, { o: '#1d2236' }, 2);
+
+  // ---------- 도트 손: k 피부(달걀 껍질 색), s 그림자 ----------
+  const HANDS = {
+    scissors: [
+      'kk.....kk..',
+      'kk.....kk..',
+      '.kk...kk...',
+      '.kk...kk...',
+      '..kk.kk....',
+      '..kkkkk....',
+      '.kkkkkkkk..',
+      'kkkkkkkkks.',
+      'kksskkkkks.',
+      'kkkkkkkkss.',
+      '.kkkkkkss..',
+      '..kkkkss...',
+      '..kkkkss...',
+    ],
+    rock: [
+      '.kk.kk.kk...',
+      'kkkkkkkkkk..',
+      'kkkkkkkkkks.',
+      'kksssssskks.',
+      'kkkkkkkkkkks',
+      'kkkkkkkkkkks',
+      '.kkkkkkkkks.',
+      '..kkkkkkss..',
+      '..kkkkkss...',
+      '..kkkkkss...',
+    ],
+    paper: [
+      '..k.k.k.k....',
+      '..k.k.k.k....',
+      '..k.k.k.k....',
+      '..k.k.k.k....',
+      '..kkkkkkk...k',
+      '..kkkkkkk..kk',
+      '..kkkkkkkkkk.',
+      '..kkkkkkkkk..',
+      '..kkkkkkkks..',
+      '...kkkkkkss..',
+      '...kkkkkss...',
+      '....kkkkss...',
+      '....kkkkss...',
+    ],
+  };
+  const HAND_COLORS = { k: '#f3efe4', s: '#c9c0aa' };
+
+  // 달걀 상대 (index.html과 같은 고정 디자인)
+  const EGG = [
+    '...wwww...',
+    '..wwwwww..',
+    '.wwwwwwws.',
+    '.wwwwwwws.',
+    'wwwwwwwwws',
+    'wwewwwwews',
+    'wbwwmmwwbs',
+    'wwwwwwwwss',
+    'wwwwwwwwss',
+    '.wwwwwwss.',
+    '..wwwsss..',
+    '...ssss...',
+  ];
+  const EGG_COLORS = { w: '#f3efe4', s: '#c9c0aa', e: '#151515', m: '#151515', b: '#e07a6f' };
+  document.getElementById('eggFace').innerHTML = pix(EGG, EGG_COLORS, 3, '#1d2236');
+
+  // ---------- 최고 기록 저장 (arcade.html과 같은 store 헬퍼) ----------
+  const store = {
+    get(k) { try { return Number(localStorage.getItem(k)) || 0; } catch (_) { return 0; } },
+    set(k, v) { try { localStorage.setItem(k, String(v)); } catch (_) {} },
+  };
+
+  // ---------- 규칙 ----------
+  const NAMES = { scissors: '가위', rock: '바위', paper: '보' };
+  const BEATS = { scissors: 'paper', rock: 'scissors', paper: 'rock' };   // 왼쪽이 오른쪽을 이긴다
+  const KEYS = { Digit1: 'scissors', Digit2: 'rock', Digit3: 'paper', Numpad1: 'scissors', Numpad2: 'rock', Numpad3: 'paper' };
+  const EGG_LINES = {
+    win:  ['으앙, 졌다!', '헉, 강하다!', '다음엔 안 질 거야!'],
+    lose: ['내가 이겼지롱!', '히히, 한 판 더?', '달걀은 단단하지!'],
+    draw: ['통했다!', '마음이 맞네!', '다시 한 번!'],
+  };
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const $ = (id) => document.getElementById(id);
+  const buttons = [...document.querySelectorAll('.hand')];
+  const meHand = $('meHand'), eggHand = $('eggHand'), call = $('call'), verdict = $('verdict'), eggLine = $('eggLine');
+  const tally = { win: 0, draw: 0, lose: 0 };
+  let streak = 0, best = store.get('rps-best-streak'), busy = false;
+  $('best').textContent = best;
+
+  const handSVG = (h) => pix(HANDS[h], HAND_COLORS, 5, '#1d2236');
+  function showHand(slot, h, cls = '') {
+    slot.className = `slot-hand filled ${slot === eggHand ? 'flip ' : ''}${cls}`;
+    slot.innerHTML = handSVG(h);
+  }
+
+  function play(me) {
+    if (busy) return;
+    busy = true;
+    buttons.forEach(b => { b.disabled = true; b.classList.toggle('picked', b.dataset.hand === me); });
+    verdict.className = 'verdict';
+    verdict.textContent = '';
+    eggLine.textContent = '';
+
+    // "가위! 바위! 보!" 구호 동안 양쪽 주먹을 흔든다
+    showHand(meHand, 'rock', 'shake');
+    showHand(eggHand, 'rock', 'shake');
+    const chant = ['가위!', '바위!', '보!'];
+    const step = reduceMotion ? 0 : 320;
+    chant.forEach((word, i) => setTimeout(() => { call.textContent = word; }, i * step));
+    setTimeout(() => reveal(me), chant.length * step);
+  }
+
+  function reveal(me) {
+    const egg = pick(Object.keys(HANDS));
+    const result = me === egg ? 'draw' : BEATS[me] === egg ? 'win' : 'lose';
+
+    showHand(meHand, me, result === 'win' ? 'won' : '');
+    showHand(eggHand, egg, result === 'lose' ? 'won' : '');
+    call.textContent = 'VS';
+
+    tally[result]++;
+    streak = result === 'win' ? streak + 1 : result === 'lose' ? 0 : streak;   // 비기면 연승 유지
+    const newBest = streak > best;
+    if (newBest) { best = streak; store.set('rps-best-streak', best); }
+
+    $('wins').textContent = tally.win;
+    $('draws').textContent = tally.draw;
+    $('losses').textContent = tally.lose;
+    $('streak').textContent = streak;
+    $('best').textContent = best;
+
+    const word = { win: '이겼다!', lose: '졌다…', draw: '비겼다!' }[result];
+    verdict.className = `verdict ${result}`;
+    verdict.textContent = `${word} 나 ${NAMES[me]} · 달걀 ${NAMES[egg]}`;
+    eggLine.textContent = newBest && streak > 1 ? `신기록! ${streak}연승이야!` : pick(EGG_LINES[result]);
+
+    busy = false;
+    buttons.forEach(b => { b.disabled = false; });
+  }
+
+  buttons.forEach(btn => {
+    btn.querySelector('.hand-art').innerHTML = pix(HANDS[btn.dataset.hand], HAND_COLORS, 6, '#1d2236');
+    btn.addEventListener('click', () => {
+      // 키보드(Enter/Space)로 눌러도 눌림 모양이 보이도록
+      btn.classList.add('hit');
+      setTimeout(() => btn.classList.remove('hit'), 110);
+      play(btn.dataset.hand);
+    });
+  });
+
+  // 키보드 1·2·3 = 가위·바위·보
+  document.addEventListener('keydown', (e) => {
+    const h = KEYS[e.code];
+    if (!h || e.repeat || e.ctrlKey || e.altKey || e.metaKey) return;
+    const btn = buttons.find(b => b.dataset.hand === h);
+    if (btn.disabled) return;
+    btn.click();
+  });
+</script>
+</body>
+</html>
